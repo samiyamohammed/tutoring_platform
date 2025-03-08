@@ -17,12 +17,16 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        screenOptions={{
+        screenOptions={({ route, navigation }) => ({
           headerShown: false,
-          gestureEnabled: true, // Enable swipe gestures
-          gestureDirection: "horizontal", // Allow left-right swiping
-          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS, // Smooth horizontal transition
-        }}
+          gestureEnabled: true,
+          gestureDirection: navigation.canGoBack()
+            ? "horizontal-inverted"
+            : "horizontal", // Fix direction for back swipe
+          cardStyleInterpolator: navigation.canGoBack()
+            ? CardStyleInterpolators.forFadeFromBottomAndroid // Left-to-right for back
+            : CardStyleInterpolators.forHorizontalIOS, // Right-to-left for forward
+        })}
       >
         <Stack.Screen name="Onboarding" component={OnboardingScreen1} />
         <Stack.Screen name="Onboarding2" component={OnboardingScreen2} />
