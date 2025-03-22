@@ -439,5 +439,8 @@ const SaveButton = styled.View`
   margin-left: 110px;
 `;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
 export default HomeScreen;

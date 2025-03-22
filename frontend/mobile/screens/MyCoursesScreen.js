@@ -60,7 +60,11 @@ const MyCoursesScreen = () => {
     (course) => course.status === selectedFilter
   );
 
+<<<<<<< HEAD
  //search
+=======
+  //search
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
   const finalFilteredCourses = statusFilteredCourses.filter((course) =>
     course.title.toLowerCase().startsWith(searchQuery.toLowerCase())
   );
@@ -92,7 +96,10 @@ const MyCoursesScreen = () => {
         />
       </SearchContainer>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
       {/* Course List */}
       <FlatList
         data={finalFilteredCourses}
@@ -189,14 +196,21 @@ const SearchInput = styled.TextInput`
   margin-left: 8px;
   font-size: 14px;
   color: #004d40;
+<<<<<<< HEAD
   padding: 5px; 
+=======
+  padding: 5px;
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
   height: 100%;
   background-color: transparent;
   placeholdertextcolor: #004d40;
 `;
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
 const CourseCard = styled.View`
   flex-direction: row;
   background-color: white;
@@ -210,8 +224,13 @@ const CourseCard = styled.View`
 `;
 
 const CourseImage = styled.Image`
+<<<<<<< HEAD
   width: 100px; 
   height: 150px; 
+=======
+  width: 100px;
+  height: 150px;
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
   border-radius: 10px;
   margin-right: 10px;
 `;

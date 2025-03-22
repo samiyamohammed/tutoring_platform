@@ -101,7 +101,10 @@ const Divider = styled.View`
   margin: 10px 30px;
 `;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
 const ProfileImage = styled.Image`
   width: 70px;
   height: 70px;
@@ -129,7 +132,11 @@ const EditButton = styled.TouchableOpacity`
 `;
 
 const MenuContainer = styled.View`
+<<<<<<< HEAD
   margin-top: 70px; 
+=======
+  margin-top: 70px;
+>>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
 `;
 
 const MenuItem = styled.TouchableOpacity`

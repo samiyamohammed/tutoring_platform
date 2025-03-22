@@ -1,0 +1,73 @@
+[
+    {
+      "image": "/profile.jpg",
+      "title": "Exploring the Cosmos",
+      "description": "A deep dive into the wonders of the universe and beyond.",
+      "name": "Dr. Jane Foster",
+      "photo": "https://example.com/jane.jpg"
+    },
+    {
+      "image": "https://example.com/image2.jpg",
+      "title": "The Art of Cooking",
+      "description": "Master the skills needed to cook delicious meals.",
+      "name": "Chef Marco Rossi",
+      "photo": "https://example.com/marco.jpg"
+    },
+    {
+      "image": "https://example.com/image3.jpg",
+      "title": "AI and the Future",
+      "description": "How artificial intelligence is shaping the world.",
+      "name": "Elena Martinez",
+      "photo": "https://example.com/elena.jpg"
+    },
+    {
+      "image": "https://example.com/image4.jpg",
+      "title": "Wildlife Photography",
+      "description": "Capturing the beauty of nature through the lens.",
+      "name": "Liam Thompson",
+      "photo": "https://example.com/liam.jpg"
+    },
+    {
+      "image": "https://example.com/image5.jpg",
+      "title": "The History of Architecture",
+      "description": "Exploring the most iconic structures in history.",
+      "name": "Sophia Carter",
+      "photo": "https://example.com/sophia.jpg"
+    },
+    {
+      "image": "https://example.com/image6.jpg",
+      "title": "The Psychology of Success",
+      "description": "Understanding the mindset behind great achievements.",
+      "name": "Dr. Robert Chang",
+      "photo": "https://example.com/robert.jpg"
+    },
+    {
+      "image": "https://example.com/image7.jpg",
+      "title": "Music Theory Basics",
+      "description": "Learn the fundamentals of music and composition.",
+      "name": "Emily Johnson",
+      "photo": "https://example.com/emily.jpg"
+    },
+    {
+      "image": "https://example.com/image7.jpg",
+      "title": "Music Theory Basics",
+      "description": "Learn the fundamentals of music and composition.",
+      "name": "Emily Johnson",
+      "photo": "https://example.com/emily.jpg"
+    },
+    {
+      "image": "https://example.com/image7.jpg",
+      "title": "Music Theory Basics",
+      "description": "Learn the fundamentals of music and composition.",
+      "name": "Emily Johnson",
+      "photo": "https://example.com/emily.jpg"
+    },
+    {
+      "image": "https://example.com/image8.jpg",
+      "title": "The Science of Fitness",
+      "description": "How exercise and nutrition impact your health.",
+      "name": "David Smith",
+      "photo": "https://example.com/david.jpg"
+    }
+  ]
+  
