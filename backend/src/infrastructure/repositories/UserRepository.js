@@ -1,12 +1,28 @@
-import UserModel from "../../domain/models/User.js";
+import User from "../../domain/models/User.js";
 
 class UserRepository {
-  async findByEmail(email) {
-    return UserModel.findOne({ email });
+  async createUser(data) {
+    return await User.create(data);
   }
 
-  async create(userData) {
-    return UserModel.create(userData);
+  async findByEmail(email) {
+    return await User.findOne({ email });
+  }
+
+  async findById(id) {
+    return await User.findById(id);
+  }
+
+  async getAllUsers() {
+    return await User.find({});
+  }
+
+  async updateUser(id, data) {
+    return await User.findByIdAndUpdate(id, data, { new: true });
+  }
+
+  async deleteUser(id) {
+    return await User.findByIdAndDelete(id);
   }
 }
 

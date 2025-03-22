@@ -1,24 +1,111 @@
 import UserService from "../../application/services/UserService.js";
-import jwt from "jsonwebtoken";
 
 class UserController {
-  async register(req, res) {
+  // Get user profile (accessible by all users)
+  async getProfile(req, res) {
+    const userId = req.user.id; // Get the ID from the token (attached by authMiddleware)
     try {
-      const { name, email, password, role } = req.body;
-      const user = await UserService.registerUser(name, email, password, role);
-      res.status(201).json({ message: "User registered", user });
+      const user = await UserService.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json(user);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
   }
 
-  async login(req, res) {
+  // Update user profile (accessible by all users)
+  async updateProfile(req, res) {
+    const userId = req.user.id; // Get the ID from the token (attached by authMiddleware)
+    const updateData = req.body;
     try {
-      const { email, password } = req.body;
-      const user = await UserService.loginUser(email, password);
+      const updatedUser = await UserService.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 
-      const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
-      res.json({ token, user: { id: user._id, name: user.name, role: user.role } });
+  async getUserById(req, res) {
+    const userId = req.params.id;
+    try {
+      const user = await UserService.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json(user);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Get all users (admin only)
+  async getAllUsers(req, res) {
+    try {
+      const users = await UserService.getAllUsers();
+      res.status(200).json(users);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getAllStudents(req, res) {
+    try {
+      const students = await UserService.getAllStudents();
+      res.status(200).json(students);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Get all tutors (admin only)
+  async getAllTutors(req, res) {
+    try {
+      const tutors = await UserService.getAllTutors();
+      res.status(200).json(tutors);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Get all admins (admin only)
+  async getAllAdmins(req, res) {
+    try {
+      const admins = await UserService.getAllAdmins();
+      res.status(200).json(admins);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Update any user (admin only)
+  async updateUser(req, res) {
+    const userId = req.params.id;
+    const updateData = req.body;
+    try {
+      const updatedUser = await UserService.updateUser(userId, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Delete a user (admin only)
+  async deleteUser(req, res) {
+    const userId = req.params.id;
+    try {
+      const deletedUser = await UserService.deleteUser(userId);
+      if (!deletedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
