@@ -4,17 +4,45 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Image,
+  Alert,
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../context/AuthContext"; // Import useAuth hook
+import styles from "../../styles/AuthScreensStyles/SignInScreenStyles";
 
 export default function SignInScreen() {
   const navigation = useNavigation();
+  const { signIn } = useAuth(); // Get signIn function from AuthContext
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleSignIn = () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please enter both email and password.");
+      return;
+    }
+
+    let role = "";
+    if (email === "student@gmail.com") {
+      role = "student";
+    } else if (email === "tutor@gmail.com") {
+      role = "tutor";
+    } else if (email === "admin@gmail.com") {
+      role = "admin";
+    } else {
+      Alert.alert("Error", "Invalid email or role not assigned.");
+      return;
+    }
+
+    // Call signIn function from AuthContext
+    signIn({ email, role });
+
+    // Navigate to the Home screen (or dashboard)
+    navigation.replace("Home"); // Change this to the actual screen you want
+  };
 
   return (
     <View style={styles.container}>
@@ -41,6 +69,7 @@ export default function SignInScreen() {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
@@ -70,9 +99,9 @@ export default function SignInScreen() {
       <TouchableOpacity onPress={() => navigation.navigate("ResetPassword")}>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>
       </TouchableOpacity>
-      
+
       {/* Sign In Button */}
-      <TouchableOpacity style={styles.signInButton}>
+      <TouchableOpacity style={styles.signInButton} onPress={handleSignIn}>
         <Text style={styles.signInText}>SIGN IN</Text>
       </TouchableOpacity>
 
@@ -107,130 +136,3 @@ export default function SignInScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-  },
-  backButton: {
-    position: "absolute",
-    top: 50,
-    left: 20,
-    zIndex: 1,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#00434C",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#00434C",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    width: "100%",
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    color: "#00434C",
-    marginBottom: 5,
-    fontWeight: "bold",
-  },
-  input: {
-    width: "100%",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#00434C",
-    borderRadius: 8,
-    paddingLeft: 10,
-    fontSize: 16,
-    color: "#00434C",
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#00434C",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-  },
-  passwordInput: {
-    flex: 1,
-    height: 50,
-    fontSize: 16,
-    color: "#00434C",
-  },
-  forgotPassword: {
-    alignSelf: "flex-end",
-    color: "#00434C",
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  signInButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#00434C",
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  signInText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    marginVertical: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#00434C",
-  },
-  orText: {
-    marginHorizontal: 10,
-    color: "#00434C",
-    fontSize: 14,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    width: "100%",
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#00434C",
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 10,
-  },
-  googleText: {
-    fontSize: 16,
-    color: "#00434C",
-  },
-  signUpText: {
-    fontSize: 14,
-    color: "#00434C",
-  },
-  signUpLink: {
-    color: "#00434C",
-    fontWeight: "bold",
-  },
-});
