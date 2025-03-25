@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { View, Text, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 
-import HomeScreen from "../screens/HomeScreen";
+import HomeScreen from "../screens/StudentsScreens/HomeScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import MessagingScreen from "../screens/MessagingScreen";
 import MyCoursesScreen from "../screens/MyCoursesScreen";
