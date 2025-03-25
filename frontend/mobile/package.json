@@ -10,13 +10,17 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-community/cli": "latest",
     "@react-native-community/masked-view": "^0.1.11",
     "@react-navigation/bottom-tabs": "^7.2.1",
     "@react-navigation/native": "^7.0.15",
     "@react-navigation/stack": "^7.1.2",
+    "@reduxjs/toolkit": "^2.6.1",
     "expo": "~52.0.37",
     "expo-status-bar": "~2.0.1",
-    "react": "18.3.1",
+    "hermes-parser": "^0.26.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-native": "0.76.7",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-paper": "^5.13.1",
@@ -25,6 +29,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-swipe-gestures": "^1.0.5",
     "react-native-vector-icons": "^10.2.0",
+    "react-redux": "^9.2.0",
     "styled-components": "^6.1.15"
   },
   "devDependencies": {
