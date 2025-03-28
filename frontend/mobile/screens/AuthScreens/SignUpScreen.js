@@ -1,26 +1,54 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Image, Alert } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../../context/AuthContext"; // Import AuthContext
+import { signupUser } from "../../application/services/authService"; // Import authentication service
 import styles from "../../styles/AuthScreensStyles/SignUpScreenStyles";
 
 export default function SignUpScreen() {
   const navigation = useNavigation();
+  const { signIn } = useAuth(); // Context function to manage authentication state
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [role, setRole] = useState("student"); 
+  const [role, setRole] = useState("student");
+  const [loading, setLoading] = useState(false);
+
+  const handleSignup = async () => {
+    if (!fullName || !email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match!");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const user = await signupUser(fullName, email, password, role);
+      
+      // Update global auth state
+      signIn({ email: user.email, role: user.role });
+
+      Alert.alert("Success", "Signup successful!");
+      navigation.replace("Home");
+    } catch (error) {
+      Alert.alert("Error", error.message || "Signup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
       {/* Back Button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => navigation.goBack()}
-      >
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <MaterialIcons name="arrow-back" size={24} color="#00434C" />
       </TouchableOpacity>
 
@@ -43,7 +71,7 @@ export default function SignUpScreen() {
 
       {/* Email Input */}
       <View style={styles.inputContainer}>
-        <Text style={styles.label}>Email Here</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
           placeholder="yourmail@gmail.com"
@@ -51,6 +79,7 @@ export default function SignUpScreen() {
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
+          autoCapitalize="none"
         />
       </View>
 
@@ -59,34 +88,18 @@ export default function SignUpScreen() {
         <Text style={styles.label}>Select Your Role</Text>
         <View style={styles.roleContainer}>
           <TouchableOpacity
-            style={[
-              styles.roleButton,
-              role === "student" && styles.roleButtonSelected,
-            ]}
+            style={[styles.roleButton, role === "student" && styles.roleButtonSelected]}
             onPress={() => setRole("student")}
           >
-            <Text
-              style={[
-                styles.roleText,
-                role === "student" && styles.roleTextSelected,
-              ]}
-            >
+            <Text style={[styles.roleText, role === "student" && styles.roleTextSelected]}>
               Student
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.roleButton,
-              role === "tutor" && styles.roleButtonSelected,
-            ]}
+            style={[styles.roleButton, role === "tutor" && styles.roleButtonSelected]}
             onPress={() => setRole("tutor")}
           >
-            <Text
-              style={[
-                styles.roleText,
-                role === "tutor" && styles.roleTextSelected,
-              ]}
-            >
+            <Text style={[styles.roleText, role === "tutor" && styles.roleTextSelected]}>
               Tutor
             </Text>
           </TouchableOpacity>
@@ -127,9 +140,7 @@ export default function SignUpScreen() {
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirmPassword}
           />
-          <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-          >
+          <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
             <MaterialIcons
               name={showConfirmPassword ? "visibility-off" : "visibility"}
               size={24}
@@ -140,8 +151,12 @@ export default function SignUpScreen() {
       </View>
 
       {/* Sign Up Button */}
-      <TouchableOpacity style={styles.signUpButton}>
-        <Text style={styles.signUpText}>SIGN UP</Text>
+      <TouchableOpacity
+        style={[styles.signUpButton, loading && styles.disabledButton]}
+        onPress={handleSignup}
+        disabled={loading}
+      >
+        <Text style={styles.signUpText}>{loading ? "Signing Up..." : "SIGN UP"}</Text>
       </TouchableOpacity>
 
       {/* Divider */}
@@ -165,10 +180,7 @@ export default function SignUpScreen() {
       {/* Sign In Link */}
       <Text style={styles.signInText}>
         Already have an Account?{" "}
-        <Text
-          style={styles.signInLink}
-          onPress={() => navigation.navigate("SignIn")}
-        >
+        <Text style={styles.signInLink} onPress={() => navigation.navigate("SignIn")}>
           Sign in here
         </Text>
       </Text>

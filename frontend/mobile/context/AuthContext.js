@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signInUser as authSignIn, signupUser as authSignUp } from "../application/services/authService"; 
 
 const AuthContext = createContext();
 
@@ -57,17 +58,13 @@ export const AuthProvider = ({ children }) => {
   // Load the token and role from storage
   useEffect(() => {
     const bootstrapAsync = async () => {
-      let userToken;
-      let userRole;
-
       try {
-        userToken = await AsyncStorage.getItem("userToken");
-        userRole = await AsyncStorage.getItem("userRole");
+        const userToken = await AsyncStorage.getItem("userToken");
+        const userRole = await AsyncStorage.getItem("userRole");
+        dispatch({ type: "RESTORE_TOKEN", token: userToken, role: userRole });
       } catch (e) {
         console.log("Failed to restore auth state:", e);
       }
-
-      dispatch({ type: "RESTORE_TOKEN", token: userToken, role: userRole });
     };
 
     bootstrapAsync();
@@ -75,64 +72,56 @@ export const AuthProvider = ({ children }) => {
 
   const authContext = useMemo(
     () => ({
-      signIn: async (data) => {
-        let userRole = "student"; // Default role
-
-        if (data.email === "student@gmail.com") {
-          userRole = "student";
-        } else if (data.email === "tutor@gmail.com") {
-          userRole = "tutor";
-        } else if (data.email === "admin@gmail.com") {
-          userRole = "admin";
-        }
-
+      signIn: async (token, role) => {
         try {
-          await AsyncStorage.setItem("userToken", "dummy-auth-token");
-          await AsyncStorage.setItem("userRole", userRole);
+          if (!token) throw new Error("Token is missing during sign-in.");
+          if (!role) throw new Error("User role is missing during sign-in.");
+      
+          await AsyncStorage.setItem("userToken", token);
+          await AsyncStorage.setItem("userRole", role);
+      
+          dispatch({ type: "SIGN_IN", token, role });
+      
+          
         } catch (e) {
-          console.log("Failed to save auth state:", e);
+          console.error("Sign-in context error:", e);
+          throw new Error("Error during authentication.");
         }
-
-        dispatch({
-          type: "SIGN_IN",
-          token: "dummy-auth-token",
-          role: userRole,
-        });
-      },
+      },    
+      
+      
       signOut: async () => {
-        console.log("Sign Out Called"); 
         try {
+          console.log("Logging out...");
+      
           await AsyncStorage.removeItem("userToken");
           await AsyncStorage.removeItem("userRole");
+      
+          dispatch({ type: "SIGN_OUT" });
+      
+          console.log("Logout state updated:", state); // Ensure state change before navigating
+      
         } catch (e) {
-          console.log("Failed to remove auth state:", e);
+          console.error("Sign-out error:", e);
         }
-
-        dispatch({ type: "SIGN_OUT" });
       },
-      signUp: async (data) => {
-        let userRole = "student"; // Default role
+      
+      
+           
 
-        if (data.email === "student@gmail.com") {
-          userRole = "student";
-        } else if (data.email === "tutor@gmail.com") {
-          userRole = "tutor";
-        } else if (data.email === "admin@gmail.com") {
-          userRole = "admin";
-        }
-
+      signUp: async (email, password) => {
         try {
-          await AsyncStorage.setItem("userToken", "dummy-auth-token");
-          await AsyncStorage.setItem("userRole", userRole);
-        } catch (e) {
-          console.log("Failed to save auth state:", e);
-        }
+          const response = await authSignUp(email, password); // Call auth service
+          const { token, role } = response;
 
-        dispatch({
-          type: "SIGN_UP",
-          token: "dummy-auth-token",
-          role: userRole,
-        });
+          await AsyncStorage.setItem("userToken", token);
+          await AsyncStorage.setItem("userRole", role);
+
+          dispatch({ type: "SIGN_UP", token, role });
+        } catch (e) {
+          console.error("Sign-up error:", e);
+          throw new Error("Failed to register. Try again later.");
+        }
       },
       state,
     }),

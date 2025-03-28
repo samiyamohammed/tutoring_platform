@@ -1,0 +1,10 @@
+[33mcdba7a3[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: pull --rebase origin main (finish): returning to refs/heads/main
+[33mcdba7a3[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{1}: pull --rebase origin main (start): checkout cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
+[33m3cde60a[m HEAD@{2}: reset: moving to HEAD
+[33m3cde60a[m HEAD@{3}: checkout: moving from courses to main
+[33mbb9d60c[m[33m ([m[1;32mcourses[m[33m)[m HEAD@{4}: commit (merge): merge conflict resolved
+[33m8120aba[m HEAD@{5}: commit: courses functionality
+[33m3cde60a[m HEAD@{6}: checkout: moving from main to courses
+[33m3cde60a[m HEAD@{7}: pull origin main: Fast-forward
+[33m41daf6c[m HEAD@{8}: commit: backend initialization
+[33m67b9c97[m HEAD@{9}: clone: from https://github.com/samiyamohammed/tutoring_platform.git
