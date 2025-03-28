@@ -3,9 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 // import Dashboard from './components/dashboard/Dashboard';
-import Student from './pages/Student';
-import Tutor from './pages/Tutor';
-import Admin from './pages/Admin';
+import Student from './pages/student/StudentPage';
+import Tutor from './pages/tutor/TutorPage';
+import Admin from './pages/admin/Admin';
 import Toast from './components/toast/Toast';
 
 const App = () => {
@@ -36,9 +36,9 @@ const App = () => {
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/register" element={<Register onRegister={handleLogin} />} />
-          <Route path="/student/dashboard" element={<Student />} />
-          <Route path="/tutor/dashboard" element={<Tutor />} />
-          <Route path="/admin/dashboard" element={<Admin />} />
+          <Route path="/student/*" element={<Student />} />
+          <Route path="/tutor/*" element={<Tutor />} />
+          <Route path="/admin/*" element={<Admin />} />
           <Route path="/" element={<Navigate to="/login" />} />
         </Routes>
         {toast.show && <Toast message={toast.message} type={toast.type} title={toast.title} />}

@@ -1,133 +1,78 @@
+// import { Link } from 'react-router-dom';
+// import { FiMenu, FaBookOpen, LuNotebookText, FaRegCircleQuestion, IoIosPeople, IoMdNotifications, CgProfile, MdVerifiedUser, MdOutlineSettings } from 'react-icons/all';
+// import logo from '../assets/logo.png';
+
+// const Sidebar = ({ onLogout, userRole }) => {
+//   // Common links for all roles
+//   // const commonLinks = [
+//   //   { to: '/dashboard', icon: <FiMenu size={32} />, text: 'Dashboard' },
+//   //   { to: '/notifications', icon: <IoMdNotifications size={32} />, text: 'Notifications' },
+//   //   { to: '/profile', icon: <CgProfile size={32} />, text: 'Profile' },
+//   // ];
+
+//   // Role-specific links
+//   const roleBasedLinks = {
+//     student: [
+//       { to: '/courses', icon: <FaBookOpen size={32} />, text: 'My Courses' },
+//       { to: '/assignments', icon: <LuNotebookText size={32} />, text: 'Assignments' },
+//       { to: '/quizzes', icon: <FaRegCircleQuestion size={32} />, text: 'Quizzes' },
+//       { to: '/schedule', icon: <IoIosPeople size={32} />, text: 'Sessions' },
+//       { to: '/find-tutors', icon: <IoIosPeople size={32} />, text: 'Find Tutors' },
+//     ],
+//     tutor: [
+//       { to: '/courses', icon: <FaBookOpen size={32} />, text: 'Manage Courses' },
+//       { to: '/assignments', icon: <LuNotebookText size={32} />, text: 'Assignments' },
+//       { to: '/quizzes', icon: <FaRegCircleQuestion size={32} />, text: 'Quizzes' },
+//       { to: '/schedule', icon: <IoIosPeople size={32} />, text: 'Schedule' },
+//       { to: '/students', icon: <IoIosPeople size={32} />, text: 'My Students' },
+//     ],
+//     admin: [
+//       { to: '/courses', icon: <FaBookOpen size={32} />, text: 'Manage Courses' },
+//       { to: '/users', icon: <IoIosPeople size={32} />, text: 'Manage Users' },
+//       { to: '/verify-tutors', icon: <MdVerifiedUser size={32} />, text: 'Verify Tutors' },
+//       { to: '/certificates', icon: <MdVerified size={32} />, text: 'Certificates' },
+//       { to: '/settings', icon: <MdOutlineSettings size={32} />, text: 'Settings' },
+//     ],
+//   };
+
+//   // combining the links
+//   const links = [...commonLinks, ...(roleBasedLinks[userRole] || [])];
+
+//   return (
+//     <aside className="w-1/6 bg-[#145D52] text-white h-screen p-4 fixed">
+//       <div className="flex gap-3 items-center justify-center mb-6">
+//         <img src={logo} alt="Logo" className="size-12 rounded-full" />
+//         <h2 className="text-3xl font-bold">EDconnect</h2>
+//       </div>
+//       <nav className="flex flex-col px-7 py-4 space-y-8">
+//         {links.map((link, index) => (
+//           <Link key={index} to={link.to} className="flex gap-5">
+//             {link.icon}
+//             <span className="text-2xl">{link.text}</span>
+//           </Link>
+//         ))}
+//       </nav>
+//       <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
+//         <button
+//           onClick={onLogout}
+//           className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2"
+//         >
+//           Log out
+//         </button>
+//       </div>
+//     </aside>
+//   );
+// };
+
+// export default Sidebar;
 import React from 'react'
 
 const Sidebar = () => {
   return (
     <div>
-      <h1>hellow</h1>
+      
     </div>
   )
 }
 
 export default Sidebar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { FiMenu } from "react-icons/fi";
-// import { FaBookOpen } from "react-icons/fa6";
-// import { LuNotebookText } from "react-icons/lu";
-// import { FaRegCircleQuestion } from "react-icons/fa6";
-// import { IoIosPeople } from "react-icons/io";
-// import { IoMdNotifications } from "react-icons/io";
-// import { CgProfile } from "react-icons/cg";
-// import {Link} from 'react-router-dom'
-
-// function Sidebar({ userRole, activeSection, setActiveSection }) {
-//   const handleNavClick = (section) => {
-//     setActiveSection(section);
-//   };type="submit"
-
-//   return (
-//     <aside className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 overflow-y-auto border-r border-gray-200 dark:border-gray-700 transition-all duration-300">
-//       <div className="p-4 flex items-center">
-//         <svg className="w-8 h-8" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-//           <circle cx="50" cy="50" r="45" fill="#5D5CDE" />
-//           <path d="M32 40 L50 30 L68 40 L68 65 L50 75 L32 65 Z" fill="white" />
-//           <path d="M50 30 L50 55 L68 65" stroke="white" stroke-width="2" fill="none" />
-//           <path d="M50 55 L32 65" stroke="white" stroke-width="2" fill="none" />
-//         </svg>
-//         <h1 className="ml-2 text-xl font-bold text-gray-900 dark:text-white">EduConnect</h1>
-//       </div>
-
-      // <nav className="px-2 py-4">
-      //   <Link to=''>
-      //       <FiMenu/>
-      //       <span className={`nav-link ${activeSection === 'dashboard' ? 'active' : ''} px-3 py-2 rounded-md text-sm font-medium w-full text-left flex items-center`}>Dashboard</span>
-      //   </Link>
-        
-      // </nav>
-//     </aside>
-//   );
-// }
-
-// export default Sidebar;
-
-// import React from 'react';
-// import { Link } from 'react-router-dom';
-
-// function Sidebar({ userRole, onLogout }) {
-//   return (
-//     <aside className="w-full md:w-64 bg-gray-100 dark:bg-gray-800 overflow-y-auto border-r border-gray-200 dark:border-gray-700 transition-all duration-300">
-//       <div className="p-4 flex items-center">
-//         <svg className="w-8 h-8" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-//           <circle cx="50" cy="50" r="45" fill="#5D5CDE" />
-//           <path d="M32 40 L50 30 L68 40 L68 65 L50 75 L32 65 Z" fill="white" />
-//           <path d="M50 30 L50 55 L68 65" stroke="white" stroke-width="2" fill="none" />
-//           <path d="M50 55 L32 65" stroke="white" stroke-width="2" fill="none" />
-//         </svg>
-//         <h1 className="ml-2 text-xl font-bold text-gray-900 dark:text-white">EduConnect</h1>
-//       </div>
-//       <nav className="px-2 py-4">
-//         <ul>
-//           <li className="mb-1">
-//             <Link
-//               to={`/${userRole}/dashboard`}
-//               className="nav-link px-3 py-2 rounded-md text-sm font-medium w-full text-left flex items-center"
-//             >
-//               Dashboard
-//             </Link>
-//           </li>
-//           {/* Add more navigation links based on userRole */}
-//         </ul>
-//       </nav>
-      // <div className="mt-auto p-4 border-t border-gray-200 dark:border-gray-700">
-      //   <button
-      //     onClick={onLogout}
-      //     className="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-      //   >
-      //     Log out
-      //   </button>
-      // </div>
-//     </aside>
-//   );
-// }
-
-// export default Sidebar;
