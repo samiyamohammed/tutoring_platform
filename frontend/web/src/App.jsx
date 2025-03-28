@@ -31,8 +31,7 @@ const App = () => {
   };
 
   return (
-    <div className="bg-white text-black">
-      <div className="h-full bg-white duration-200">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-100">
         <Routes>
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/register" element={<Register onRegister={handleLogin} />} />
@@ -43,7 +42,6 @@ const App = () => {
         </Routes>
         {toast.show && <Toast message={toast.message} type={toast.type} title={toast.title} />}
       </div>
-    </div>
   );
 };
 
