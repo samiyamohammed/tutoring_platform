@@ -3,7 +3,6 @@ import AuthService from "../../application/services/AuthService.js";
 class AuthController {
   // Unified registration method
   async register(req, res) {
-    req.body.role = "student";
     const { role, ...data } = req.body;
 
     try {

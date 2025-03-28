@@ -1,8 +1,8 @@
 import React from "react";
 import { TouchableOpacity, Alert } from "react-native";
 import { useAuth } from "../../context/AuthContext";
-import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // Check if storage is cleared
+import { useNavigation , useIsFocused } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Container,
   ProfileContainer,
@@ -19,23 +19,23 @@ import {
   FooterText,
 } from "../../styles/StudentsScreensStyles/ProfileScreenStyle";
 import Icon from "react-native-vector-icons/Feather";
+import { CommonActions } from "@react-navigation/native";
 
 const StudentProfileScreen = () => {
-  const { signOut } = useAuth(); 
+  const { signOut } = useAuth(); // Get signOut function from AuthContext
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const handleLogout = async () => {
-    
-    const { signOut } = useAuth(); 
     try {
-      await signOut(); 
-
-      // Double-check AsyncStorage
-      await AsyncStorage.removeItem("userToken");
-      await AsyncStorage.removeItem("userRole");
-
+      console.log("Logging out...");
+  
+      await signOut(); // Wait for signOut to complete
+  
       Alert.alert("Logged Out", "You have been successfully logged out.", [
-        { text: "OK", onPress: () => navigation.replace("SignIn") },
+        {
+          text: "OK",          
+        },
       ]);
     } catch (error) {
       console.error("Logout Error:", error);
@@ -60,7 +60,7 @@ const StudentProfileScreen = () => {
 
       <Divider />
 
-      {/* List of options */}
+      {/* Menu Options */}
       <MenuContainer>
         <TouchableOpacity>
           <MenuItem>
@@ -86,7 +86,7 @@ const StudentProfileScreen = () => {
           </MenuItem>
         </TouchableOpacity>
 
-        {/* Logout Button */}
+        {/* Logout Button - Now Works Correctly */}
         <TouchableOpacity >
           <MenuItem onPress={handleLogout}>
             <Icon name="log-out" size={22} color="#004d40" />
