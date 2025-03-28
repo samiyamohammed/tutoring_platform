@@ -32,11 +32,13 @@
 
 // export default Dashboard;
 
-import React from 'react';
-import { Outlet, Link } from 'react-router-dom';
+import {useContext} from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { AuthContext } from '../../context/AuthContext';
 
-function Dashboard({ userRole, onLogout }) {
+function Dashboard({ onLogout }) {
+  const {userRole} = useContext(AuthContext)
   return (
     <div className="h-full flex flex-col md:flex-row">
       <Sidebar userRole={userRole} onLogout={onLogout} />
