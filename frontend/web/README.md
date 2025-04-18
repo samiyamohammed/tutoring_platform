@@ -14,6 +14,7 @@ EduConnect is a comprehensive online learning platform built with Next.js, Tailw
   - [Student Routes](#student-routes)
   - [Tutor Routes](#tutor-routes)
   - [Admin Routes](#admin-routes)
+- [Payment Integration](#payment-integration)
 - [Tech Stack](#tech-stack)
 - [Contributing](#contributing)
 
@@ -44,7 +45,9 @@ Before you begin, ensure you have the following installed:
 3. Set up environment variables:
    Create a `.env.local` file in the root directory with the following variables:
    \`\`\`
-   NEXT_PUBLIC_API_URL=your_api_url
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   CHAPA_SECRET_KEY=your_chapa_secret_key
+   NEXT_PUBLIC_CHAPA_PUBLIC_KEY=your_chapa_public_key
    # Add other environment variables as needed
    \`\`\`
 
@@ -70,6 +73,7 @@ Before you begin, ensure you have the following installed:
 - **Document Verification**: Secure verification process for tutors
 - **Certificate Management**: Create and award certificates to students
 - **Waiting List**: Queue system for popular courses
+- **Payment Processing**: Secure payment integration with Chapa
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## 🗺️ Routes
@@ -93,6 +97,10 @@ Before you begin, ensure you have the following installed:
 | `/student/video-session` | Join video sessions | [Go to Video Sessions](http://localhost:3000/student/video-session) |
 | `/student/certificates` | View earned certificates | [Go to Certificates](http://localhost:3000/student/certificates) |
 | `/student/waiting-list` | View waiting list status | [Go to Waiting List](http://localhost:3000/student/waiting-list) |
+| `/student/checkout/:courseId` | Course checkout page | [Example Checkout](http://localhost:3000/student/checkout/1) |
+| `/student/payment/success` | Payment success page | [Success Page](http://localhost:3000/student/payment/success) |
+| `/student/payment/failed` | Payment failed page | [Failed Page](http://localhost:3000/student/payment/failed) |
+| `/student/payment-history` | Payment transaction history | [Payment History](http://localhost:3000/student/payment-history) |
 | `/student/settings` | Account settings | [Go to Settings](http://localhost:3000/student/settings) |
 
 ### Tutor Routes
@@ -123,6 +131,31 @@ Before you begin, ensure you have the following installed:
 | `/admin/payments` | Manage payment transactions | [Go to Payments](http://localhost:3000/admin/payments) |
 | `/admin/settings` | Platform settings | [Go to Settings](http://localhost:3000/admin/settings) |
 
+## 💳 Payment Integration
+
+EduConnect uses Chapa for payment processing, a secure payment gateway that supports multiple payment methods in Ethiopia and across Africa.
+
+### Payment Flow
+
+1. **Initialization**: When a student enrolls in a course, the application initializes a payment transaction with Chapa.
+2. **Checkout**: The student is presented with a secure checkout page where they can enter their payment details.
+3. **Verification**: After payment, Chapa sends a verification callback to confirm the transaction status.
+4. **Completion**: The student is redirected to a success or failure page based on the payment outcome.
+
+### Available Payment Methods
+
+- Credit/Debit Cards
+- Mobile Money (Telebirr)
+- Bank Transfers
+- Other local payment methods supported by Chapa
+
+### Implementation Details
+
+- Server-side API routes handle secure communication with Chapa's API
+- Client-side components provide a seamless checkout experience
+- Webhook handlers process payment confirmations
+- Transaction history is maintained for both students and tutors
+
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js, React, TypeScript
@@ -130,6 +163,7 @@ Before you begin, ensure you have the following installed:
 - **State Management**: React Context API
 - **Video Conferencing**: WebRTC
 - **Authentication**: JWT-based authentication
+- **Payment Processing**: Chapa Payment Gateway
 
 ## 🔍 For Beginners
 
@@ -157,7 +191,7 @@ Before you begin, ensure you have the following installed:
 ### Common Tasks
 
 - **For Students**:
-  - Enrolling in a course: Go to Explore → Find a course → Click Enroll
+  - Enrolling in a course: Go to Explore → Find a course → Click Enroll → Complete payment
   - Joining a video session: Go to Video Sessions → Select a scheduled session → Join
 
 - **For Tutors**:

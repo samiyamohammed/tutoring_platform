@@ -24,44 +24,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 
-// Define types for our data
-type Tutor = {
-  name: string
-  avatar: string
-  rating: number
-}
-
-type Sessions = {
-  online: boolean
-  group: boolean
-  oneOnOne: boolean
-}
-
-type Pricing = {
-  online: number
-  group: number
-  oneOnOne: number
-}
-
-type Course = {
-  id: number
-  title: string
-  description: string
-  category: string
-  level: string
-  tutor: Tutor
-  students: number
-  maxStudents: number
-  rating: number
-  reviews: number
-  image: string
-  sessions: Sessions
-  pricing: Pricing
-  tags: string[]
-}
-
 // Mock data for courses
-const courses: Course[] = [
+const courses = [
   {
     id: 1,
     title: "Advanced JavaScript Programming",
@@ -231,25 +195,6 @@ const courses: Course[] = [
     tags: ["Machine Learning", "AI", "Python"],
   },
 ]
-
-// Define props for components
-interface CourseCardProps {
-  course: Course
-}
-
-interface AvatarProps {
-  className?: string
-  children: React.ReactNode
-}
-
-interface AvatarImageProps {
-  src: string
-  alt: string
-}
-
-interface AvatarFallbackProps {
-  children: React.ReactNode
-}
 
 export default function ExploreCoursesPage() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -575,7 +520,36 @@ export default function ExploreCoursesPage() {
   )
 }
 
-function CourseCard({ course }: CourseCardProps) {
+interface Course {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  tutor: {
+    name: string;
+    avatar: string;
+    rating: number;
+  };
+  students: number;
+  maxStudents: number;
+  rating: number;
+  reviews: number;
+  image: string;
+  sessions: {
+    online: boolean;
+    group: boolean;
+    oneOnOne: boolean;
+  };
+  pricing: {
+    online: number;
+    group: number;
+    oneOnOne: number;
+  };
+  tags: string[];
+}
+
+function CourseCard({ course }: { course: Course }) {
   return (
     <Card className="overflow-hidden flex flex-col h-full">
       <div className="aspect-video w-full overflow-hidden">
@@ -632,21 +606,21 @@ function CourseCard({ course }: CourseCardProps) {
       </CardContent>
       <CardFooter className="p-4 pt-0 mt-auto">
         <Button className="w-full" asChild>
-          <Link href={`/student/courses/${course.id}`}>View Course</Link>
+          <Link href={`/student/checkout/${course.id}`}>Enroll Now</Link>
         </Button>
       </CardFooter>
     </Card>
   )
 }
 
-function Avatar({ className, children }: AvatarProps) {
+function Avatar({ className, children }: { className: string; children: React.ReactNode }) {
   return <div className={`relative flex shrink-0 overflow-hidden rounded-full ${className}`}>{children}</div>
 }
 
-function AvatarImage({ src, alt }: AvatarImageProps) {
+function AvatarImage({ src, alt }: { src: string; alt: string }) {
   return <img className="aspect-square h-full w-full" src={src || "/placeholder.svg"} alt={alt} />
 }
 
-function AvatarFallback({ children }: AvatarFallbackProps) {
+function AvatarFallback({ children }: { children: React.ReactNode }) {
   return <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">{children}</div>
 }
