@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Camera, CameraOff, Hand, Mic, MicOff, Phone, PhoneOff, Users, Video } from "lucide-react"
+import { Camera, CameraOff, Hand, Mic, MicOff, Phone, PhoneOff, Users, Video, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 // Mock data for participants
 const mockParticipants = [
@@ -95,10 +96,15 @@ export default function StudentVideoSessionPage() {
   ])
   const [showLeaveSessionDialog, setShowLeaveSessionDialog] = useState(false)
   const [showJoinDialog, setShowJoinDialog] = useState(true)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [isCheckingDevices, setIsCheckingDevices] = useState(true)
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null)
+  const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
   const remoteVideoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({})
   const chatContainerRef = useRef<HTMLDivElement>(null)
+  const mediaStreamRef = useRef<MediaStream | null>(null)
 
   const form = useForm<z.infer<typeof chatSchema>>({
     resolver: zodResolver(chatSchema),
@@ -107,35 +113,88 @@ export default function StudentVideoSessionPage() {
     },
   })
 
-  // Simulate getting local video stream
+  // Check for device permissions before joining
   useEffect(() => {
-    if (isJoined && isCameraOn && localVideoRef.current) {
-      navigator.mediaDevices
-        .getUserMedia({ video: true, audio: isMicOn })
-        .then((stream) => {
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream
-          }
-        })
-        .catch((err) => {
-          console.error("Error accessing media devices:", err)
-          toast({
-            variant: "destructive",
-            title: "Camera access error",
-            description: "Could not access your camera or microphone.",
-          })
-          setIsCameraOn(false)
-        })
-    }
+    async function checkDevicePermissions() {
+      setIsCheckingDevices(true)
+      try {
+        // Check if the browser supports mediaDevices
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setCameraError("Your browser doesn't support camera access. Please try a different browser.")
+          setHasCameraPermission(false)
+          setHasMicrophonePermission(false)
+          return
+        }
 
-    return () => {
-      // Clean up streams when component unmounts
-      if (localVideoRef.current && localVideoRef.current.srcObject) {
-        const stream = localVideoRef.current.srcObject as MediaStream
-        stream.getTracks().forEach((track) => track.stop())
+        // Try to access camera and microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+
+        // If successful, set permissions to true
+        setHasCameraPermission(true)
+        setHasMicrophonePermission(true)
+
+        // Display preview in join dialog
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream
+        }
+
+        // Store the stream for later use
+        mediaStreamRef.current = stream
+        setCameraError(null)
+      } catch (err: any) {
+        console.error("Error accessing media devices:", err)
+
+        // Handle specific permission errors
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          setCameraError("Camera or microphone permission denied. Please allow access in your browser settings.")
+          setHasCameraPermission(false)
+          setHasMicrophonePermission(false)
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          setCameraError("No camera or microphone found. Please connect a device and try again.")
+          setHasCameraPermission(false)
+          setHasMicrophonePermission(false)
+        } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+          setCameraError("Your camera or microphone is already in use by another application.")
+          setHasCameraPermission(false)
+          setHasMicrophonePermission(false)
+        } else {
+          setCameraError(`Error accessing camera: ${err.message || "Unknown error"}`)
+          setHasCameraPermission(false)
+          setHasMicrophonePermission(false)
+        }
+      } finally {
+        setIsCheckingDevices(false)
       }
     }
-  }, [isJoined, isCameraOn, isMicOn, toast])
+
+    checkDevicePermissions()
+
+    return () => {
+      // Clean up the media stream when component unmounts
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+      }
+    }
+  }, [])
+
+  // Update video stream when camera state changes
+  useEffect(() => {
+    if (isJoined && mediaStreamRef.current && localVideoRef.current) {
+      // If we already have a stream, update track enabled states
+      mediaStreamRef.current.getVideoTracks().forEach((track) => {
+        track.enabled = isCameraOn
+      })
+
+      mediaStreamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = isMicOn
+      })
+
+      // Make sure the video element has the stream
+      if (localVideoRef.current.srcObject !== mediaStreamRef.current) {
+        localVideoRef.current.srcObject = mediaStreamRef.current
+      }
+    }
+  }, [isJoined, isCameraOn, isMicOn])
 
   // Scroll chat to bottom when new messages arrive
   useEffect(() => {
@@ -162,6 +221,15 @@ export default function StudentVideoSessionPage() {
   }, [isJoined, participants])
 
   const handleJoinSession = () => {
+    if (!hasCameraPermission && !hasMicrophonePermission) {
+      toast({
+        variant: "destructive",
+        title: "Permission required",
+        description: "Camera or microphone access is required to join the session.",
+      })
+      return
+    }
+
     setIsJoined(true)
     setShowJoinDialog(false)
     toast({
@@ -172,9 +240,9 @@ export default function StudentVideoSessionPage() {
 
   const handleLeaveSession = () => {
     // Clean up video streams
-    if (localVideoRef.current && localVideoRef.current.srcObject) {
-      const stream = localVideoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach((track) => track.stop())
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+      mediaStreamRef.current = null
     }
 
     setIsJoined(false)
@@ -184,9 +252,8 @@ export default function StudentVideoSessionPage() {
 
   const toggleMic = () => {
     setIsMicOn(!isMicOn)
-    if (localVideoRef.current && localVideoRef.current.srcObject) {
-      const stream = localVideoRef.current.srcObject as MediaStream
-      stream.getAudioTracks().forEach((track) => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getAudioTracks().forEach((track) => {
         track.enabled = !isMicOn
       })
     }
@@ -194,9 +261,8 @@ export default function StudentVideoSessionPage() {
 
   const toggleCamera = () => {
     setIsCameraOn(!isCameraOn)
-    if (localVideoRef.current && localVideoRef.current.srcObject) {
-      const stream = localVideoRef.current.srcObject as MediaStream
-      stream.getVideoTracks().forEach((track) => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getVideoTracks().forEach((track) => {
         track.enabled = !isCameraOn
       })
     }
@@ -222,6 +288,38 @@ export default function StudentVideoSessionPage() {
     }
     setChatMessages([...chatMessages, newMessage])
     form.reset()
+  }
+
+  const retryCamera = async () => {
+    setCameraError(null)
+    setIsCheckingDevices(true)
+
+    try {
+      // Request permissions again
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      })
+
+      setHasCameraPermission(true)
+      setHasMicrophonePermission(true)
+
+      // Update the stream
+      mediaStreamRef.current = stream
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream
+      }
+
+      setIsCameraOn(true)
+      setIsMicOn(true)
+    } catch (err: any) {
+      console.error("Error retrying camera access:", err)
+      setCameraError(`Could not access camera: ${err.message || "Unknown error"}`)
+      setHasCameraPermission(false)
+    } finally {
+      setIsCheckingDevices(false)
+    }
   }
 
   if (!isJoined && !showJoinDialog) {
@@ -263,6 +361,19 @@ export default function StudentVideoSessionPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Video grid */}
         <div className="flex-1 overflow-auto p-4">
+          {cameraError && isJoined && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Camera Error</AlertTitle>
+              <AlertDescription>
+                {cameraError}
+                <Button variant="outline" size="sm" className="mt-2" onClick={retryCamera}>
+                  Retry Camera Access
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Tutor video (always first and larger) */}
             <div className="relative col-span-full aspect-video overflow-hidden rounded-lg bg-muted md:col-span-2">
@@ -295,7 +406,7 @@ export default function StudentVideoSessionPage() {
                 playsInline
                 className={`h-full w-full object-cover ${!isCameraOn && "hidden"}`}
               />
-              {!isCameraOn && (
+              {(!isCameraOn || cameraError) && (
                 <div className="flex h-full w-full items-center justify-center">
                   <Avatar className="h-20 w-20">
                     <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Your avatar" />
@@ -446,6 +557,7 @@ export default function StudentVideoSessionPage() {
                 size="icon"
                 className="h-12 w-12 rounded-full"
                 onClick={toggleMic}
+                disabled={!hasMicrophonePermission}
               >
                 {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
               </Button>
@@ -462,6 +574,7 @@ export default function StudentVideoSessionPage() {
                 size="icon"
                 className="h-12 w-12 rounded-full"
                 onClick={toggleCamera}
+                disabled={!hasCameraPermission}
               >
                 {isCameraOn ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
               </Button>
@@ -534,24 +647,45 @@ export default function StudentVideoSessionPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="aspect-video overflow-hidden rounded-lg bg-muted">
-              {isCameraOn ? (
-                <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Your avatar" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
+            {isCheckingDevices ? (
+              <div className="flex h-[200px] items-center justify-center">
+                <div className="text-center">
+                  <div className="mb-2 text-sm">Checking camera and microphone...</div>
+                  <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : cameraError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Camera Access Error</AlertTitle>
+                <AlertDescription>
+                  {cameraError}
+                  <Button variant="outline" size="sm" className="mt-2" onClick={retryCamera}>
+                    Retry Camera Access
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="aspect-video overflow-hidden rounded-lg bg-muted">
+                {isCameraOn && hasCameraPermission ? (
+                  <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src="/placeholder.svg?height=80&width=80" alt="Your avatar" />
+                      <AvatarFallback>JD</AvatarFallback>
+                    </Avatar>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex justify-center space-x-4">
               <Button
                 variant={isMicOn ? "outline" : "destructive"}
                 size="icon"
                 className="h-10 w-10 rounded-full"
                 onClick={toggleMic}
+                disabled={!hasMicrophonePermission}
               >
                 {isMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
               </Button>
@@ -560,6 +694,7 @@ export default function StudentVideoSessionPage() {
                 size="icon"
                 className="h-10 w-10 rounded-full"
                 onClick={toggleCamera}
+                disabled={!hasCameraPermission}
               >
                 {isCameraOn ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
               </Button>
@@ -569,7 +704,12 @@ export default function StudentVideoSessionPage() {
             <Button variant="outline" onClick={() => router.back()}>
               Cancel
             </Button>
-            <Button onClick={handleJoinSession}>Join Session</Button>
+            <Button
+              onClick={handleJoinSession}
+              disabled={isCheckingDevices || (!hasCameraPermission && !hasMicrophonePermission)}
+            >
+              Join Session
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
