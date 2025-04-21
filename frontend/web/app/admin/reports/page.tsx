@@ -1,0 +1,145 @@
+"use client"
+
+// Mock data for reports
+const reports = [
+  {
+    id: "REP001",
+    type: "inappropriate_content",
+    status: "pending",
+    reportedBy: {
+      id: "USR004",
+      name: "Emily Davis",
+      email: "emily.davis@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    reportedEntity: {
+      type: "course",
+      id: "CRS003",
+      name: "Data Science with Python",
+    },
+    reportedUser: {
+      id: "USR003",
+      name: "Michael Brown",
+      email: "michael.brown@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    description: "The course contains inappropriate language and offensive content in module 3.",
+    createdAt: "2023-05-10T14:30:00Z",
+    updatedAt: "2023-05-10T14:30:00Z",
+  },
+  {
+    id: "REP002",
+    type: "harassment",
+    status: "pending",
+    reportedBy: {
+      id: "USR005",
+      name: "Robert Wilson",
+      email: "robert.wilson@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    reportedEntity: {
+      type: "user",
+      id: "USR006",
+      name: "Jennifer Lee",
+    },
+    reportedUser: {
+      id: "USR006",
+      name: "Jennifer Lee",
+      email: "jennifer.lee@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    description: "This tutor has been sending harassing messages during one-on-one sessions.",
+    createdAt: "2023-05-09T11:15:00Z",
+    updatedAt: "2023-05-09T11:15:00Z",
+  },
+  {
+    id: "REP003",
+    type: "scam",
+    status: "resolved",
+    reportedBy: {
+      id: "USR002",
+      name: "Sarah Johnson",
+      email: "sarah.johnson@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    reportedEntity: {
+      type: "course",
+      id: "CRS005",
+      name: "Digital Marketing Masterclass",
+    },
+    reportedUser: {
+      id: "USR001",
+      name: "John Smith",
+      email: "john.smith@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    description: "This course is a scam. The tutor is promising guaranteed job placements but doesn't deliver.",
+    resolution: "Course content reviewed and misleading claims removed. Warning issued to tutor.",
+    createdAt: "2023-05-05T09:45:00Z",
+    updatedAt: "2023-05-07T13:20:00Z",
+    resolvedBy: {
+      id: "USR008",
+      name: "Admin User",
+    },
+  },
+  {
+    id: "REP004",
+    type: "copyright",
+    status: "resolved",
+    reportedBy: {
+      id: "USR001",
+      name: "John Smith",
+      email: "john.smith@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    reportedEntity: {
+      type: "course",
+      id: "CRS002",
+      name: "UI/UX Design Fundamentals",
+    },
+    reportedUser: {
+      id: "USR002",
+      name: "Sarah Johnson",
+      email: "sarah.johnson@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    description: "This course contains copyrighted material from my design course without permission.",
+    resolution: "Copyrighted content removed from the course. Warning issued to tutor.",
+    createdAt: "2023-05-03T16:20:00Z",
+    updatedAt: "2023-05-06T10:15:00Z",
+    resolvedBy: {
+      id: "USR008",
+      name: "Admin User",
+    },
+  },
+  {
+    id: "REP005",
+    type: "inappropriate_behavior",
+    status: "dismissed",
+    reportedBy: {
+      id: "USR007",
+      name: "David Miller",
+      email: "david.miller@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    reportedEntity: {
+      type: "user",
+      id: "USR004",
+      name: "Emily Davis",
+    },
+    reportedUser: {
+      id: "USR004",
+      name: "Emily Davis",
+      email: "emily.davis@example.com",
+      avatar: "/placeholder.svg?height=40&width=40",
+    },
+    description: "This student is being disruptive in group sessions and making it difficult for others to learn.",
+    resolution: "No evidence of disruptive behavior found in session recordings. Report dismissed.",
+    createdAt: "2023-05-02T13:10:00Z",
+    updatedAt: "2023-05-06T10:15:00Z",
+    resolvedBy: {
+      id: "USR008",
+      name: "Admin User",
+    },
+},
+]
