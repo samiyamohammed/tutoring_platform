@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   BookOpen,
@@ -32,140 +32,100 @@ import {
 import { TutorSidebar } from "@/components/tutor-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/components/ui/use-toast"
 
 interface Course {
-  id: number
+  _id: string
   title: string
   description: string
   category: string
   level: string
-  status: "active" | "draft" | "inactive"
-  students: number
-  maxStudents: number
-  rating: number
-  reviews: number
-  image: string
-  sessions: {
-    online: boolean
-    group: boolean
-    oneOnOne: boolean
-  }
+  deadline: Date
+  status: "pending" | "approved" | "rejected"
+  currentEnrollment: number
+  capacity: number
+  sessionTypes: ("online" | "group" | "oneOnOne")[]
   pricing: {
-    online: number
-    group: number
-    oneOnOne: number
+    online?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+    group?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+    oneOnOne?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
   }
-  nextSession: string | null
+  tutor: string
+  modules: string[]
+  quizzes: string[]
+  prerequisites: string[]
+  waitingListCapacity: number
+  waitingList: string[]
+  createdAt: Date
+  updatedAt: Date
 }
-
-// Mock data for courses
-const courses: Course[] = [
-  {
-    id: 1,
-    title: "Advanced JavaScript Programming",
-    description: "Master modern JavaScript concepts and techniques for web development.",
-    category: "Programming",
-    level: "Advanced",
-    status: "active",
-    students: 24,
-    maxStudents: 30,
-    rating: 4.8,
-    reviews: 18,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 49.99,
-      group: 99.99,
-      oneOnOne: 199.99,
-    },
-    nextSession: "Tomorrow, 10:00 AM",
-  },
-  {
-    id: 2,
-    title: "UI/UX Design Fundamentals",
-    description: "Learn the principles of user interface and experience design.",
-    category: "Design",
-    level: "Beginner",
-    status: "active",
-    students: 18,
-    maxStudents: 25,
-    rating: 4.6,
-    reviews: 12,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: false,
-    },
-    pricing: {
-      online: 39.99,
-      group: 89.99,
-      oneOnOne: 0,
-    },
-    nextSession: "Friday, 2:00 PM",
-  },
-  {
-    id: 3,
-    title: "Data Science with Python",
-    description: "Explore data analysis, visualization, and machine learning with Python.",
-    category: "Data Science",
-    level: "Intermediate",
-    status: "draft",
-    students: 0,
-    maxStudents: 20,
-    rating: 0,
-    reviews: 0,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 59.99,
-      group: 119.99,
-      oneOnOne: 249.99,
-    },
-    nextSession: null,
-  },
-  {
-    id: 4,
-    title: "Mobile App Development with React Native",
-    description: "Build cross-platform mobile applications using React Native.",
-    category: "Programming",
-    level: "Intermediate",
-    status: "inactive",
-    students: 15,
-    maxStudents: 20,
-    rating: 4.5,
-    reviews: 8,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: false,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 54.99,
-      group: 0,
-      oneOnOne: 219.99,
-    },
-    nextSession: null,
-  },
-]
 
 interface CourseCardProps {
   course: Course
 }
 
 export default function TutorCoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+        console.log(token)
+        const response = await fetch('http://localhost:5000/api/course', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch courses')
+        }
+
+        const data = await response.json()
+        setCourses(data)
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch courses",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [toast])
 
   // Filter courses based on search query and filters
   const filteredCourses = courses.filter((course) => {
@@ -179,9 +139,64 @@ export default function TutorCoursesPage() {
   })
 
   // Group courses by status for the tabs
-  const activeCourses = filteredCourses.filter((course) => course.status === "active")
-  const draftCourses = filteredCourses.filter((course) => course.status === "draft")
-  const inactiveCourses = filteredCourses.filter((course) => course.status === "inactive")
+  const pendingCourses = filteredCourses.filter((course) => course.status === "pending")
+  const approvedCourses = filteredCourses.filter((course) => course.status === "approved")
+  const rejectedCourses = filteredCourses.filter((course) => course.status === "rejected")
+
+  const handleStatusChange = async (courseId: string, newStatus: "pending" | "approved" | "rejected") => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+      console.log(token)
+      const response = await fetch(`http://localhost:5000/api/course/${courseId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update course status')
+      }
+
+      setCourses(courses.map(course => 
+        course._id === courseId ? { ...course, status: newStatus } : course
+      ))
+
+      toast({
+        title: "Success",
+        description: `Course status updated to ${newStatus}`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update course status",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <TutorSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h1 className="text-lg font-semibold">My Courses</h1>
+                <p className="text-sm text-muted-foreground">Loading your courses...</p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -219,9 +234,9 @@ export default function TutorCoursesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -230,9 +245,9 @@ export default function TutorCoursesPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="Programming">Programming</SelectItem>
-                      <SelectItem value="Design">Design</SelectItem>
-                      <SelectItem value="Data Science">Data Science</SelectItem>
+                      {Array.from(new Set(courses.map(course => course.category))).map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -246,9 +261,9 @@ export default function TutorCoursesPage() {
             <Tabs defaultValue="all" className="space-y-4">
               <TabsList>
                 <TabsTrigger value="all">All Courses ({filteredCourses.length})</TabsTrigger>
-                <TabsTrigger value="active">Active ({activeCourses.length})</TabsTrigger>
-                <TabsTrigger value="draft">Draft ({draftCourses.length})</TabsTrigger>
-                <TabsTrigger value="inactive">Inactive ({inactiveCourses.length})</TabsTrigger>
+                <TabsTrigger value="pending">Pending ({pendingCourses.length})</TabsTrigger>
+                <TabsTrigger value="approved">Approved ({approvedCourses.length})</TabsTrigger>
+                <TabsTrigger value="rejected">Rejected ({rejectedCourses.length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="all" className="space-y-4">
@@ -275,67 +290,77 @@ export default function TutorCoursesPage() {
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredCourses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                      <CourseCard 
+                        key={course._id} 
+                        course={course} 
+                        onStatusChange={handleStatusChange}
+                      />
                     ))}
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="active" className="space-y-4">
-                {activeCourses.length === 0 ? (
+              <TabsContent value="pending" className="space-y-4">
+                {pendingCourses.length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-10">
                       <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No active courses</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Publish a course to make it active</p>
+                      <h3 className="text-lg font-medium">No pending courses</h3>
+                      <p className="text-sm text-muted-foreground mt-1">All your courses have been reviewed</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {activeCourses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                    {pendingCourses.map((course) => (
+                      <CourseCard 
+                        key={course._id} 
+                        course={course} 
+                        onStatusChange={handleStatusChange}
+                      />
                     ))}
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="draft" className="space-y-4">
-                {draftCourses.length === 0 ? (
+              <TabsContent value="approved" className="space-y-4">
+                {approvedCourses.length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-10">
                       <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No draft courses</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Start creating a new course</p>
-                      <Button className="mt-4" asChild>
-                        <Link href="/tutor/create-course">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create New Course
-                        </Link>
-                      </Button>
+                      <h3 className="text-lg font-medium">No approved courses</h3>
+                      <p className="text-sm text-muted-foreground mt-1">Your courses are pending review</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {draftCourses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                    {approvedCourses.map((course) => (
+                      <CourseCard 
+                        key={course._id} 
+                        course={course} 
+                        onStatusChange={handleStatusChange}
+                      />
                     ))}
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="inactive" className="space-y-4">
-                {inactiveCourses.length === 0 ? (
+              <TabsContent value="rejected" className="space-y-4">
+                {rejectedCourses.length === 0 ? (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center py-10">
                       <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No inactive courses</h3>
-                      <p className="text-sm text-muted-foreground mt-1">You don't have any inactive courses</p>
+                      <h3 className="text-lg font-medium">No rejected courses</h3>
+                      <p className="text-sm text-muted-foreground mt-1">All your courses have been approved</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {inactiveCourses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                    {rejectedCourses.map((course) => (
+                      <CourseCard 
+                        key={course._id} 
+                        course={course} 
+                        onStatusChange={handleStatusChange}
+                      />
                     ))}
                   </div>
                 )}
@@ -348,12 +373,16 @@ export default function TutorCoursesPage() {
   )
 }
 
-function CourseCard({ course }: CourseCardProps) {
+function CourseCard({ course, onStatusChange }: CourseCardProps & { onStatusChange: (id: string, status: "pending" | "approved" | "rejected") => void }) {
+  const hasOnline = course.sessionTypes.includes("online")
+  const hasGroup = course.sessionTypes.includes("group")
+  const hasOneOnOne = course.sessionTypes.includes("oneOnOne")
+
   return (
     <Card className="overflow-hidden">
       <div className="aspect-video w-full overflow-hidden">
         <img
-          src={course.image || "/placeholder.svg"}
+          src="/placeholder.svg"
           alt={course.title}
           className="h-full w-full object-cover transition-transform hover:scale-105"
         />
@@ -361,7 +390,11 @@ function CourseCard({ course }: CourseCardProps) {
       <CardHeader className="p-4 pb-0">
         <div className="flex items-center justify-between">
           <Badge
-            variant={course.status === "active" ? "default" : course.status === "draft" ? "outline" : "secondary"}
+            variant={
+              course.status === "approved" ? "default" : 
+              course.status === "pending" ? "outline" : 
+              "destructive"
+            }
             className="mb-2"
           >
             {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
@@ -375,33 +408,41 @@ function CourseCard({ course }: CourseCardProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link href={`/tutor/courses/${course.id}`}>
+                <Link href={`/tutor/courses/${course._id}`}>
                   <Eye className="mr-2 h-4 w-4" />
                   View Course
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/tutor/courses/${course.id}/edit`}>
+                <Link href={`/tutor/courses/${course._id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Course
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {course.status === "active" ? (
-                <DropdownMenuItem>
+              {course.status === "approved" && (
+                <DropdownMenuItem onClick={() => onStatusChange(course._id, "rejected")}>
                   <Clock className="mr-2 h-4 w-4" />
-                  Deactivate Course
+                  Reject Course
                 </DropdownMenuItem>
-              ) : course.status === "inactive" ? (
-                <DropdownMenuItem>
+              )}
+              {course.status === "rejected" && (
+                <DropdownMenuItem onClick={() => onStatusChange(course._id, "approved")}>
                   <Clock className="mr-2 h-4 w-4" />
-                  Activate Course
+                  Approve Course
                 </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem>
-                  <Clock className="mr-2 h-4 w-4" />
-                  Publish Course
-                </DropdownMenuItem>
+              )}
+              {course.status === "pending" && (
+                <>
+                  <DropdownMenuItem onClick={() => onStatusChange(course._id, "approved")}>
+                    <Clock className="mr-2 h-4 w-4" />
+                    Approve Course
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onStatusChange(course._id, "rejected")}>
+                    <Clock className="mr-2 h-4 w-4" />
+                    Reject Course
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -417,42 +458,30 @@ function CourseCard({ course }: CourseCardProps) {
           </div>
           <div className="flex items-center">
             <Users className="mr-1 h-4 w-4" />
-            {course.students}/{course.maxStudents}
+            {course.currentEnrollment}/{course.capacity}
           </div>
-          {course.rating > 0 && (
-            <div className="flex items-center">
-              <Star className="mr-1 h-4 w-4 fill-primary text-primary" />
-              {course.rating} ({course.reviews})
-            </div>
-          )}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          {course.sessions.online && (
+          {hasOnline && course.pricing.online && (
             <Badge variant="outline" className="bg-background">
-              Online: ${course.pricing.online}
+              Online: ${course.pricing.online.price}
             </Badge>
           )}
-          {course.sessions.group && (
+          {hasGroup && course.pricing.group && (
             <Badge variant="outline" className="bg-background">
-              Group: ${course.pricing.group}
+              Group: ${course.pricing.group.price}
             </Badge>
           )}
-          {course.sessions.oneOnOne && course.pricing.oneOnOne > 0 && (
+          {hasOneOnOne && course.pricing.oneOnOne && (
             <Badge variant="outline" className="bg-background">
-              1-on-1: ${course.pricing.oneOnOne}
+              1-on-1: ${course.pricing.oneOnOne.price}
             </Badge>
           )}
         </div>
-        {course.nextSession && (
-          <div className="mt-3 flex items-center text-sm">
-            <Calendar className="mr-1 h-4 w-4 text-muted-foreground" />
-            <span>Next: {course.nextSession}</span>
-          </div>
-        )}
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button variant="outline" className="w-full" asChild>
-          <Link href={`/tutor/courses/${course.id}`}>
+          <Link href={`/tutor/courses/${course._id}`}>
             <ChevronRight className="mr-2 h-4 w-4" />
             Manage Course
           </Link>

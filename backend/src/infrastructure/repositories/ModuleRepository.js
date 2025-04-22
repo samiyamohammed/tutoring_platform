@@ -13,6 +13,10 @@ class ModuleRepository {
         return await Module.findById(id).populate('course');
     }
 
+    async findByCourse(courseId) {
+        return await Module.find({ course: courseId });
+    }    
+
     async update(id, updateData) {
         return await Module.findByIdAndUpdate(id, updateData, { new: true });
     }

@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import {
@@ -23,6 +22,10 @@ import {
   Star,
   Users,
   Video,
+  BookOpen,
+  Trash2,
+  ListChecks,
+  FileQuestion,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -40,202 +43,317 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { TutorSidebar } from "@/components/tutor-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { useToast } from "@/components/ui/use-toast"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-// Mock course data
-const coursesData = [
-  {
-    id: "1",
-    title: "Advanced JavaScript Programming",
-    description:
-      "Master modern JavaScript concepts and techniques for web development. Learn ES6+, async programming, functional concepts, and more.",
-    category: "Programming",
-    level: "Advanced",
-    status: "active",
-    studentCount: 24,
-    maxStudents: 30,
-    completionRate: 68,
-    rating: 4.8,
-    reviews: 18,
-    image: "/placeholder.svg?height=300&width=600",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 49.99,
-      group: 99.99,
-      oneOnOne: 199.99,
-    },
-    nextSession: "Tomorrow, 10:00 AM",
-    modules: [
-      {
-        id: "m1",
-        title: "Introduction to Advanced JavaScript",
-        lessons: [
-          { id: "l1", title: "Course Overview", type: "video", duration: "10:15", completed: 24 },
-          { id: "l2", title: "JavaScript Fundamentals Recap", type: "video", duration: "15:30", completed: 22 },
-          { id: "l3", title: "Setting Up Your Development Environment", type: "text", duration: "5:00", completed: 20 },
-          { id: "l4", title: "Module 1 Quiz", type: "quiz", questions: 10, completed: 18 },
-        ],
-      },
-      {
-        id: "m2",
-        title: "ES6+ Features",
-        lessons: [
-          { id: "l5", title: "Arrow Functions", type: "video", duration: "12:45", completed: 19 },
-          { id: "l6", title: "Destructuring", type: "video", duration: "14:20", completed: 17 },
-          { id: "l7", title: "Template Literals", type: "video", duration: "8:10", completed: 16 },
-          { id: "l8", title: "Spread and Rest Operators", type: "video", duration: "11:30", completed: 15 },
-          { id: "l9", title: "ES6+ Features Practice", type: "assignment", duration: "45:00", completed: 14 },
-        ],
-      },
-      {
-        id: "m3",
-        title: "Asynchronous JavaScript",
-        lessons: [
-          { id: "l10", title: "Callbacks and Callback Hell", type: "video", duration: "18:30", completed: 12 },
-          { id: "l11", title: "Promises", type: "video", duration: "22:15", completed: 10 },
-          { id: "l12", title: "Async/Await", type: "video", duration: "20:45", completed: 8 },
-          {
-            id: "l13",
-            title: "Asynchronous Programming Exercise",
-            type: "assignment",
-            duration: "60:00",
-            completed: 7,
-          },
-          { id: "l14", title: "Module 3 Quiz", type: "quiz", questions: 15, completed: 6 },
-        ],
-      },
-      {
-        id: "m4",
-        title: "Functional Programming Concepts",
-        lessons: [
-          { id: "l15", title: "Pure Functions", type: "video", duration: "15:20", completed: 5 },
-          { id: "l16", title: "Higher-Order Functions", type: "video", duration: "17:45", completed: 4 },
-          { id: "l17", title: "Function Composition", type: "video", duration: "14:30", completed: 3 },
-          { id: "l18", title: "Immutability", type: "video", duration: "12:10", completed: 2 },
-        ],
-      },
-      {
-        id: "m5",
-        title: "Final Project",
-        lessons: [
-          { id: "l19", title: "Project Requirements", type: "text", duration: "10:00", completed: 1 },
-          { id: "l20", title: "Project Submission", type: "assignment", duration: "120:00", completed: 0 },
-          { id: "l21", title: "Final Assessment", type: "quiz", questions: 30, completed: 0 },
-        ],
-      },
-    ],
-    upcomingSessions: [
-      {
-        id: "s1",
-        type: "group",
-        title: "ES6+ Features Deep Dive",
-        date: "2023-05-15T10:00:00Z",
-        duration: 90,
-        attendees: 12,
-        maxAttendees: 15,
-      },
-      {
-        id: "s2",
-        type: "oneOnOne",
-        title: "JavaScript Project Review",
-        date: "2023-05-16T14:30:00Z",
-        duration: 60,
-        attendees: 1,
-        maxAttendees: 1,
-        student: {
-          name: "Jane Smith",
-          email: "jane.smith@example.com",
-          avatar: "/placeholder.svg?height=40&width=40",
-        },
-      },
-      {
-        id: "s3",
-        type: "group",
-        title: "Asynchronous JavaScript Workshop",
-        date: "2023-05-18T11:00:00Z",
-        duration: 120,
-        attendees: 8,
-        maxAttendees: 15,
-      },
-    ],
-    enrolledStudents: [
-      {
-        id: "st1",
-        name: "Jane Smith",
-        email: "jane.smith@example.com",
-        avatar: "/placeholder.svg?height=40&width=40",
-        progress: 85,
-        enrollmentType: "oneOnOne",
-        lastActive: "2023-05-14T09:45:00Z",
-      },
-      {
-        id: "st2",
-        name: "Michael Johnson",
-        email: "michael.johnson@example.com",
-        avatar: "/placeholder.svg?height=40&width=40",
-        progress: 72,
-        enrollmentType: "group",
-        lastActive: "2023-05-13T16:20:00Z",
-      },
-      {
-        id: "st3",
-        name: "Emily Davis",
-        email: "emily.davis@example.com",
-        avatar: "/placeholder.svg?height=40&width=40",
-        progress: 94,
-        enrollmentType: "online",
-        lastActive: "2023-05-14T11:10:00Z",
-      },
-      {
-        id: "st4",
-        name: "Robert Wilson",
-        email: "robert.wilson@example.com",
-        avatar: "/placeholder.svg?height=40&width=40",
-        progress: 45,
-        enrollmentType: "group",
-        lastActive: "2023-05-12T14:30:00Z",
-      },
-      {
-        id: "st5",
-        name: "Sarah Brown",
-        email: "sarah.brown@example.com",
-        avatar: "/placeholder.svg?height=40&width=40",
-        progress: 68,
-        enrollmentType: "online",
-        lastActive: "2023-05-14T08:15:00Z",
-      },
-    ],
-    analytics: {
-      completionRate: 68,
-      averageScore: 82,
-      studentEngagement: 76,
-      weeklyEnrollment: [4, 6, 3, 5, 2, 1, 3],
-      moduleCompletion: [
-        { name: "Module 1", completed: 20, total: 24 },
-        { name: "Module 2", completed: 16, total: 24 },
-        { name: "Module 3", completed: 10, total: 24 },
-        { name: "Module 4", completed: 5, total: 24 },
-        { name: "Module 5", completed: 1, total: 24 },
-      ],
-      assessmentScores: [
-        { name: "Quiz 1", average: 85 },
-        { name: "Assignment 1", average: 78 },
-        { name: "Quiz 2", average: 82 },
-        { name: "Assignment 2", average: 76 },
-        { name: "Final Assessment", average: 0 },
-      ],
-    },
-  },
-]
+type ContentType = 'video' | 'text'
+
+interface Course {
+  _id: string
+  title: string
+  description: string
+  category: string
+  level: string
+  deadline: Date
+  tutor: string
+  modules: Module[]
+  quizzes: Quiz[]
+  sessionTypes: ('online' | 'group' | 'oneOnOne')[]
+  pricing: {
+    online?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+    group?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+    oneOnOne?: {
+      price: number
+      maxStudents: number
+      schedule: {
+        day: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+  }
+  prerequisites: string[]
+  status: 'pending' | 'approved' | 'rejected'
+  capacity: number
+  waitingListCapacity: number
+  currentEnrollment: number
+  waitingList: string[]
+  createdAt: Date
+  updatedAt: Date
+  // Analytics fields
+  completionRate?: number
+  averageScore?: number
+  studentEngagement?: number
+}
+
+interface Session {
+  _id: string
+  courseId: string
+  type: 'online' | 'group' | 'oneOnOne'
+  title: string
+  date: Date
+  duration: number
+  attendees: number
+  maxAttendees: number
+  student?: {
+    _id: string
+    name: string
+    email: string
+    avatar?: string
+  }
+}
+
+interface Student {
+  _id: string
+  name: string
+  email: string
+  avatar?: string
+  progress: number
+  enrollmentType: 'online' | 'group' | 'oneOnOne'
+  lastActive: Date
+}
+
+interface Module {
+  _id: string
+  course: string
+  title: string
+  description: string
+  content: string
+  type: 'video' | 'text' | 'quiz' | 'assignment'
+  duration: number
+  isPublished: boolean
+  order: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface Quiz {
+  _id: string
+  title: string
+  order: number
+  duration: number
+  gradingDate: Date  
+  isPublished: boolean
+  createdAt: Date
+  updatedAt: Date
+}
 
 export default function CourseDetailPage() {
   const params = useParams()
   const courseId = params.id as string
-  const course = coursesData.find((c) => c.id === courseId) || coursesData[0]
+  const [course, setCourse] = useState<Course | null>(null)
+  const [content, setContent] = useState<(Module | Quiz)[]>([])  
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [modules, setModules] = useState<Module[]>([])
+  const [students, setStudents] = useState<Student[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
+  const { toast } = useToast()
+  const [isAddingModule, setIsAddingModule] = useState(false)
+  const [newModuleTitle, setNewModuleTitle] = useState("")
+
+    useEffect(() => {
+          const fetchContent = async () => {
+              try {
+                  const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+  
+                  console.log('Fetching content for course:', courseId)
+                  console.log('Token:', token)
+  
+                  const [courseRes] = await Promise.all([
+                      fetch(`http://localhost:5000/api/course/${courseId}`, {
+                          headers: { 'Authorization': `Bearer ${token}` },
+                      })
+                  ]);
+  
+                  if (!courseRes.ok) throw new Error('Failed to fetch content')
+  
+                  const courseData = await courseRes.json()
+                  setCourse(courseData)
+  
+                  const modules = await courseData.modules
+                  const quizzes = await courseData.quizzes
+  
+                  const combined = [...modules, ...quizzes].sort((a, b) => a.order - b.order)
+                  setContent(combined)
+              } catch (error) {
+                  toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: error instanceof Error ? error.message : "Failed to fetch content",
+                  })
+              } finally {
+                  setLoading(false)
+              }
+          }
+  
+          fetchContent()
+      }, [courseId, toast])
+
+  const handleStatusChange = async (newStatus: 'pending' | 'approved' | 'rejected') => {
+    if (!course) return
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+      const response = await fetch(`http://localhost:5000/api/course/${course._id}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update course status')
+      }
+
+      setCourse({ ...course, status: newStatus })
+      toast({
+        title: "Success",
+        description: `Course status updated to ${newStatus}`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update course status",
+      })
+    }
+  }
+
+  const handleAddModule = async () => {
+    if (!newModuleTitle.trim() || !course) return
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+      const response = await fetch(`http://localhost:5000/api/course/${course._id}/modules`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: newModuleTitle,
+          content: "", // Default empty content
+          course: course._id,
+          order: modules.length + 1 // Next order number
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to add module')
+
+      const newModule = await response.json()
+      setModules([...modules, newModule].sort((a, b) => a.order - b.order))
+      setNewModuleTitle("")
+      setIsAddingModule(false)
+      toast({
+        title: "Success",
+        description: "Module added successfully",
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add module",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <TutorSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Link href="/tutor/courses" className="text-sm text-muted-foreground hover:text-foreground">
+                  Courses
+                </Link>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Loading...</span>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
+  }
+
+  if (!course) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <TutorSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Link href="/tutor/courses" className="text-sm text-muted-foreground hover:text-foreground">
+                  Courses
+                </Link>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Course Not Found</span>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center">
+                <h3 className="text-lg font-medium">Course not found</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  The course you're looking for doesn't exist or you don't have access to it
+                </p>
+                <Button className="mt-4" asChild>
+                  <Link href="/tutor/courses">
+                    Back to Courses
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
+  }
+
+  // Calculate completion rate if not provided
+  // const completionRate = course.completionRate ||
+  //   (course.modules.length > 0
+  //     ? Math.round(
+  //       (course.modules.reduce((sum, module) => sum + (module.length[0]?.completedCount || 0), 0) /
+  //         (course.currentEnrollment * course.modules.length)) * 100
+  //     )
+  //     : 0)
+
+  // Filter upcoming sessions (within next 30 days)
+  const upcomingSessions = sessions
+    .filter(session => new Date(session.date) > new Date() &&
+      new Date(session.date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  // Filter past sessions
+  const pastSessions = sessions
+    .filter(session => new Date(session.date) <= new Date())
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return (
     <SidebarProvider>
@@ -252,7 +370,7 @@ export default function CourseDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/tutor/courses/${course.id}/edit`}>
+                <Link href={`/tutor/courses/${course._id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Course
                 </Link>
@@ -274,21 +392,29 @@ export default function CourseDetailPage() {
                     Course Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {course.status === "active" ? (
-                    <DropdownMenuItem>
+                  {course.status === "approved" && (
+                    <DropdownMenuItem onClick={() => handleStatusChange("rejected")}>
                       <Clock className="mr-2 h-4 w-4" />
-                      Deactivate Course
+                      Reject Course
                     </DropdownMenuItem>
-                  ) : course.status === "inactive" ? (
-                    <DropdownMenuItem>
+                  )}
+                  {course.status === "rejected" && (
+                    <DropdownMenuItem onClick={() => handleStatusChange("approved")}>
                       <Clock className="mr-2 h-4 w-4" />
-                      Activate Course
+                      Approve Course
                     </DropdownMenuItem>
-                  ) : (
-                    <DropdownMenuItem>
-                      <Clock className="mr-2 h-4 w-4" />
-                      Publish Course
-                    </DropdownMenuItem>
+                  )}
+                  {course.status === "pending" && (
+                    <>
+                      <DropdownMenuItem onClick={() => handleStatusChange("approved")}>
+                        <Clock className="mr-2 h-4 w-4" />
+                        Approve Course
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleStatusChange("rejected")}>
+                        <Clock className="mr-2 h-4 w-4" />
+                        Reject Course
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -307,7 +433,9 @@ export default function CourseDetailPage() {
                       <Badge variant="outline">{course.level}</Badge>
                       <Badge
                         variant={
-                          course.status === "active" ? "default" : course.status === "draft" ? "outline" : "secondary"
+                          course.status === "approved" ? "default" :
+                            course.status === "pending" ? "outline" :
+                              "destructive"
                         }
                       >
                         {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
@@ -315,26 +443,19 @@ export default function CourseDetailPage() {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <div className="flex items-center">
-                      <Star className="mr-1 h-5 w-5 fill-primary text-primary" />
-                      <span className="text-xl font-bold">{course.rating}</span>
-                      <span className="ml-1 text-sm text-muted-foreground">({course.reviews} reviews)</span>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-muted-foreground">
+                    <div className="flex items-center text-sm text-muted-foreground">
                       <Users className="mr-1 h-4 w-4" />
                       <span>
-                        {course.studentCount}/{course.maxStudents} students enrolled
+                        {course.currentEnrollment}/{course.capacity} students enrolled
                       </span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video w-full overflow-hidden rounded-md border">
-                    <img
-                      src={course.image || "/placeholder.svg"}
-                      alt={course.title}
-                      className="h-full w-full object-cover"
-                    />
+                  <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted">
+                    <div className="flex h-full items-center justify-center">
+                      <Video className="h-16 w-16 text-muted-foreground" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -354,29 +475,29 @@ export default function CourseDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1 rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground">Avg. Score</div>
-                      <div className="text-2xl font-bold">{course.analytics.averageScore}%</div>
+                      <div className="text-2xl font-bold">{course.averageScore || 0}%</div>
                     </div>
                     <div className="space-y-1 rounded-lg border p-3">
                       <div className="text-sm text-muted-foreground">Engagement</div>
-                      <div className="text-2xl font-bold">{course.analytics.studentEngagement}%</div>
+                      <div className="text-2xl font-bold">{course.studentEngagement || 0}%</div>
                     </div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-sm font-medium">Session Types</div>
                     <div className="flex flex-wrap gap-2">
-                      {course.sessions.online && (
+                      {course.sessionTypes.includes("online") && course.pricing?.online && (
                         <Badge variant="outline" className="bg-background">
-                          Online: ${course.pricing.online}
+                          Online: ${course.pricing.online.price}
                         </Badge>
                       )}
-                      {course.sessions.group && (
+                      {course.sessionTypes.includes("group") && course.pricing?.group && (
                         <Badge variant="outline" className="bg-background">
-                          Group: ${course.pricing.group}
+                          Group: ${course.pricing.group.price}
                         </Badge>
                       )}
-                      {course.sessions.oneOnOne && (
+                      {course.sessionTypes.includes("oneOnOne") && course.pricing?.oneOnOne && (
                         <Badge variant="outline" className="bg-background">
-                          1-on-1: ${course.pricing.oneOnOne}
+                          1-on-1: ${course.pricing.oneOnOne.price}
                         </Badge>
                       )}
                     </div>
@@ -402,9 +523,9 @@ export default function CourseDetailPage() {
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{course.studentCount}</div>
+                      <div className="text-2xl font-bold">{course.currentEnrollment}</div>
                       <p className="text-xs text-muted-foreground">
-                        {course.maxStudents - course.studentCount} spots remaining
+                        {course.capacity - course.currentEnrollment} spots remaining
                       </p>
                     </CardContent>
                   </Card>
@@ -416,7 +537,7 @@ export default function CourseDetailPage() {
                     <CardContent>
                       <div className="text-2xl font-bold">{course.completionRate}%</div>
                       <p className="text-xs text-muted-foreground">
-                        {Math.round(course.studentCount * (course.completionRate / 100))} students completed
+                        {Math.round(course.currentEnrollment * ( course.completionRate || 10 / 100))} students completed
                       </p>
                     </CardContent>
                   </Card>
@@ -426,7 +547,7 @@ export default function CourseDetailPage() {
                       <GraduationCap className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{course.analytics.averageScore}%</div>
+                      <div className="text-2xl font-bold">{course.averageScore || 0}%</div>
                       <p className="text-xs text-muted-foreground">Across all assessments</p>
                     </CardContent>
                   </Card>
@@ -437,16 +558,16 @@ export default function CourseDetailPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-md font-medium">
-                        {course.upcomingSessions && course.upcomingSessions.length > 0
-                          ? new Date(course.upcomingSessions[0].date).toLocaleDateString()
+                        {upcomingSessions.length > 0
+                          ? new Date(upcomingSessions[0].date).toLocaleDateString()
                           : "No upcoming sessions"}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {course.upcomingSessions && course.upcomingSessions.length > 0
-                          ? new Date(course.upcomingSessions[0].date).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                        {upcomingSessions.length > 0
+                          ? new Date(upcomingSessions[0].date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
                           : "Schedule a session"}
                       </p>
                     </CardContent>
@@ -460,19 +581,37 @@ export default function CourseDetailPage() {
                       <CardDescription>Module completion by students</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {course.analytics.moduleCompletion.map((module, i) => (
-                          <div key={i} className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{module.name}</span>
-                              <span>
-                                {module.completed}/{module.total} students
-                              </span>
-                            </div>
-                            <Progress value={(module.completed / module.total) * 100} className="h-2" />
-                          </div>
-                        ))}
-                      </div>
+                      {course.modules.length > 0 ? (
+                        <div className="space-y-4">
+                          {course.modules.map((module, i) => {
+                            const moduleCompletion = course.modules.length 
+                            return (
+                              <div key={module._id} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span>{module.title}</span>
+                                  <span>
+                                    {moduleCompletion}/{course.currentEnrollment} students
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={(moduleCompletion / course.currentEnrollment) * 100}
+                                  className="h-2"
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <BookOpen className="h-10 w-10 text-muted-foreground mb-2" />
+                          <h3 className="text-lg font-medium">No modules yet</h3>
+                          <p className="text-sm text-muted-foreground mt-1">Add modules to your course</p>
+                          <Button className="mt-4" size="sm">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Module
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -483,9 +622,9 @@ export default function CourseDetailPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {course.upcomingSessions && course.upcomingSessions.length > 0 ? (
-                          course.upcomingSessions.slice(0, 3).map((session, i) => (
-                            <div key={i} className="flex items-center">
+                        {upcomingSessions.length > 0 ? (
+                          upcomingSessions.slice(0, 3).map((session) => (
+                            <div key={session._id} className="flex items-center">
                               <div className="flex items-center justify-center rounded-md border p-2 mr-4">
                                 {session.type === "group" ? (
                                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -523,10 +662,10 @@ export default function CourseDetailPage() {
                         )}
                       </div>
                     </CardContent>
-                    {course.upcomingSessions && course.upcomingSessions.length > 0 && (
+                    {upcomingSessions.length > 0 && (
                       <CardFooter>
                         <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/tutor/courses/${course.id}/sessions`}>View All Sessions</Link>
+                          <Link href={`/tutor/courses/${course._id}/sessions`}>View All Sessions</Link>
                         </Button>
                       </CardFooter>
                     )}
@@ -534,93 +673,98 @@ export default function CourseDetailPage() {
                 </div>
               </TabsContent>
 
+
               <TabsContent value="content" className="space-y-4">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                       <CardTitle>Course Content</CardTitle>
-                      <CardDescription>Manage your course modules and lessons</CardDescription>
+                      <CardDescription>View your course modules</CardDescription>
                     </div>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Module
+                    <Button asChild>
+                      <Link href={`/tutor/courses/${courseId}/modules`}>
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Manage Modules
+                      </Link>
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {course.modules.map((module, moduleIndex) => (
-                        <div key={module.id} className="rounded-lg border">
-                          <div className="flex items-center justify-between p-4">
-                            <div className="flex items-center gap-2">
-                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                                {moduleIndex + 1}
-                              </span>
-                              <h3 className="font-medium">{module.title}</h3>
-                              <Badge variant="outline" className="ml-2">
-                                {module.lessons.length} lessons
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit module</span>
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Plus className="h-4 w-4" />
-                                <span className="sr-only">Add lesson</span>
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="border-t">
-                            {module.lessons.map((lesson, lessonIndex) => (
-                              <div
-                                key={lesson.id}
-                                className="flex items-center justify-between border-b last:border-b-0 p-4"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span className="text-sm text-muted-foreground">
-                                    {moduleIndex + 1}.{lessonIndex + 1}
-                                  </span>
-                                  {lesson.type === "video" && <Video className="h-4 w-4 text-muted-foreground" />}
-                                  {lesson.type === "text" && <FileText className="h-4 w-4 text-muted-foreground" />}
-                                  {lesson.type === "quiz" && (
-                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                  )}
-                                  {lesson.type === "assignment" && (
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
-                                  )}
-                                  <span className="font-medium">{lesson.title}</span>
+                    {course.modules.length > 0 ? (
+                      <div className="space-y-4">
+                        {course.modules.map((module) => (
+                          <div key={module._id} className="border rounded-lg overflow-hidden">
+                            <div className="flex items-center justify-between p-4 bg-muted/50">
+                              <div className="flex items-center gap-4">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border">
+                                  <span className="font-medium">{module.order}</span>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center text-sm text-muted-foreground">
-                                    <Users className="mr-1 h-4 w-4" />
-                                    <span>
-                                      {lesson.completed}/{course.studentCount}
-                                    </span>
-                                  </div>
-                                  {lesson.duration && (
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <Clock className="mr-1 h-4 w-4" />
-                                      <span>{lesson.duration}</span>
-                                    </div>
-                                  )}
-                                  {lesson.questions && (
-                                    <div className="flex items-center text-sm text-muted-foreground">
-                                      <MessageSquare className="mr-1 h-4 w-4" />
-                                      <span>{lesson.questions} questions</span>
-                                    </div>
-                                  )}
-                                  <Button variant="ghost" size="sm">
-                                    <Edit className="h-4 w-4" />
-                                    <span className="sr-only">Edit lesson</span>
-                                  </Button>
+                                <div>
+                                  <h3 className="font-medium flex items-center gap-2">
+                                    {module.title}
+                                    {module.isPublished && (
+                                      <Badge variant="default">
+                                        Published
+                                      </Badge>
+                                    )}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground line-clamp-1">
+                                    {module.description}
+                                  </p>
                                 </div>
                               </div>
-                            ))}
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="flex items-center gap-1 capitalize">
+                                  {module.type === 'video' && <Video className="h-4 w-4" />}
+                                  {module.type === 'text' && <FileText className="h-4 w-4" />}
+                                  {module.type === 'quiz' && <ListChecks className="h-4 w-4" />}
+                                  {module.type === 'assignment' && <FileQuestion className="h-4 w-4" />}
+                                  {module.type}
+                                  {module.duration > 0 && ` • ${module.duration} min`}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="p-4 border-t">
+                              {module.type === 'video' && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Video className="h-4 w-4" />
+                                  <span>Video content</span>
+                                </div>
+                              )}
+                              {module.type === 'text' && (
+                                <div className="text-sm text-muted-foreground line-clamp-2">
+                                  {module.content}
+                                </div>
+                              )}
+                              {module.type === 'quiz' && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <ListChecks className="h-4 w-4" />
+                                  <span>Quiz content</span>
+                                </div>
+                              )}
+                              {module.type === 'assignment' && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <FileQuestion className="h-4 w-4" />
+                                  <span>Assignment details</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No modules yet</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Create your first module in the management page
+                        </p>
+                        <Button className="mt-4" asChild>
+                          <Link href={`/tutor/courses/${courseId}/modules`}>
+                            Go to Modules
+                          </Link>
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -631,7 +775,7 @@ export default function CourseDetailPage() {
                     <div>
                       <CardTitle>Enrolled Students</CardTitle>
                       <CardDescription>
-                        {course.studentCount} students enrolled ({course.maxStudents - course.studentCount} spots remaining)
+                        {course.currentEnrollment} students enrolled ({course.capacity - course.currentEnrollment} spots remaining)
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -646,49 +790,57 @@ export default function CourseDetailPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {course.enrolledStudents.map((student) => (
-                        <div key={student.id} className="flex items-center justify-between rounded-lg border p-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarImage src={student.avatar || "/placeholder.svg"} alt={student.name} />
-                              <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{student.name}</div>
-                              <div className="text-sm text-muted-foreground">{student.email}</div>
+                    {students.length > 0 ? (
+                      <div className="space-y-4">
+                        {students.map((student) => (
+                          <div key={student._id} className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar>
+                                <AvatarImage src={student.avatar || "/placeholder.svg"} alt={student.name} />
+                                <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{student.name}</div>
+                                <div className="text-sm text-muted-foreground">{student.email}</div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <Badge
-                              variant={
-                                student.enrollmentType === "oneOnOne"
-                                  ? "default"
+                            <div className="flex items-center gap-4">
+                              <Badge
+                                variant={
+                                  student.enrollmentType === "oneOnOne"
+                                    ? "default"
+                                    : student.enrollmentType === "group"
+                                      ? "secondary"
+                                      : "outline"
+                                }
+                              >
+                                {student.enrollmentType === "oneOnOne"
+                                  ? "1-on-1"
                                   : student.enrollmentType === "group"
-                                    ? "secondary"
-                                    : "outline"
-                              }
-                            >
-                              {student.enrollmentType === "oneOnOne"
-                                ? "1-on-1"
-                                : student.enrollmentType === "group"
-                                  ? "Group"
-                                  : "Online"}
-                            </Badge>
-                            <div className="flex items-center gap-1 text-sm">
-                              <span>Progress:</span>
-                              <span className="font-medium">{student.progress}%</span>
+                                    ? "Group"
+                                    : "Online"}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-sm">
+                                <span>Progress:</span>
+                                <span className="font-medium">{student.progress}%</span>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Last active: {new Date(student.lastActive).toLocaleDateString()}
+                              </div>
+                              <Button variant="ghost" size="sm">
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              Last active: {new Date(student.lastActive).toLocaleDateString()}
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No students enrolled</h3>
+                        <p className="text-sm text-muted-foreground mt-1">Students will appear here when they enroll</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -706,10 +858,10 @@ export default function CourseDetailPage() {
                     </Button>
                   </CardHeader>
                   <CardContent>
-                    {course.upcomingSessions && course.upcomingSessions.length > 0 ? (
+                    {upcomingSessions.length > 0 ? (
                       <div className="space-y-4">
-                        {course.upcomingSessions.map((session) => (
-                          <div key={session.id} className="flex items-center justify-between rounded-lg border p-4">
+                        {upcomingSessions.map((session) => (
+                          <div key={session._id} className="flex items-center justify-between rounded-lg border p-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                                 {session.type === "group" ? (
@@ -772,13 +924,58 @@ export default function CourseDetailPage() {
                     <CardDescription>View your completed sessions for this course</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
-                      <Clock className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No past sessions</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Your completed sessions will appear here
-                      </p>
-                    </div>
+                    {pastSessions.length > 0 ? (
+                      <div className="space-y-4">
+                        {pastSessions.map((session) => (
+                          <div key={session._id} className="flex items-center justify-between rounded-lg border p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                                {session.type === "group" ? (
+                                  <Users className="h-5 w-5 text-muted-foreground" />
+                                ) : (
+                                  <User className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium">{session.title}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {new Date(session.date).toLocaleDateString()} at{" "}
+                                  {new Date(session.date).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                  {" • "}
+                                  {session.duration} min
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Badge variant={session.type === "oneOnOne" ? "default" : "secondary"}>
+                                {session.type === "oneOnOne" ? "1-on-1" : "Group"}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-sm">
+                                <Users className="mr-1 h-4 w-4 text-muted-foreground" />
+                                <span>
+                                  {session.attendees}/{session.maxAttendees}
+                                </span>
+                              </div>
+                              <Button variant="ghost" size="sm">
+                                <FileText className="h-4 w-4" />
+                                <span className="sr-only">View details</span>
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-10 text-center">
+                        <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No past sessions</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Your completed sessions will appear here
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -799,21 +996,37 @@ export default function CourseDetailPage() {
 
                   <Card>
                     <CardHeader>
-                      <CardTitle>Assessment Scores</CardTitle>
-                      <CardDescription>Average scores by assessment</CardDescription>
+                      <CardTitle>Module Completion</CardTitle>
+                      <CardDescription>Student progress through modules</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {course.analytics.assessmentScores.map((assessment) => (
-                          <div key={assessment.name} className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{assessment.name}</span>
-                              <span className="font-medium">{assessment.average}%</span>
-                            </div>
-                            <Progress value={assessment.average} className="h-2" />
-                          </div>
-                        ))}
-                      </div>
+                      {course.modules.length > 0 ? (
+                        <div className="space-y-4">
+                          {course.modules.map((module) => {
+                            const moduleCompletion = course.modules.length || 0
+                            return (
+                              <div key={module._id} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="truncate">{module.title}</span>
+                                  <span className="font-medium">
+                                    {Math.round((moduleCompletion / course.currentEnrollment) * 100)}%
+                                  </span>
+                                </div>
+                                <Progress
+                                  value={(moduleCompletion / course.currentEnrollment) * 100}
+                                  className="h-2"
+                                />
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <BookOpen className="h-10 w-10 text-muted-foreground mb-2" />
+                          <h3 className="text-lg font-medium">No modules yet</h3>
+                          <p className="text-sm text-muted-foreground mt-1">Add modules to track progress</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -831,8 +1044,8 @@ export default function CourseDetailPage() {
 
                   <Card className="col-span-full">
                     <CardHeader>
-                      <CardTitle>Weekly Enrollment</CardTitle>
-                      <CardDescription>New students enrolled per week</CardDescription>
+                      <CardTitle>Enrollment Trends</CardTitle>
+                      <CardDescription>New students enrolled over time</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="h-[200px] w-full flex items-center justify-center bg-muted/20 rounded-md">
@@ -866,7 +1079,7 @@ function User({ className }: UserProps) {
       strokeLinejoin="round"
       className={className}
     >
-     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
   )
