@@ -6,6 +6,9 @@ import connectDB from "./infrastructure/database/db.js";
 import userRoutes from "./interfaces/routes/userRoutes.js";
 import authRoutes from "./interfaces/routes/authRoutes.js";
 import courseRoutes from "./interfaces/routes/courseRoutes.js";
+import quizRoutes from "./interfaces/routes/quizRoutes.js";
+import questionRoutes from "./interfaces/routes/questionRoutes.js";
+import moduleRoutes from "./interfaces/routes/moduleRoutes.js";
 import chatRoutes from "./interfaces/routes/chatRoutes.js";
 import sessionRoutes from './interfaces/routes/sessionRoutes.js';
 import enrollmentRoutes from './interfaces/routes/enrollmentRoutes.js';
@@ -28,6 +31,8 @@ app.use('/api/enrollment', authenticate, enrollmentRoutes);
 app.use("/api/users", authenticate, userRoutes);
 app.use("/api/chat", authenticate, chatRoutes);
 app.use("/api/course", authenticate, courseRoutes);
+// app.use("/api/module", authenticate, moduleRoutes);
+// app.use("/api/quiz", authenticate, quizRoutes);
 app.use('/api/session', sessionRoutes);
 
 

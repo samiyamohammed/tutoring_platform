@@ -2,9 +2,9 @@ import EnrollmentService from '../../application/services/EnrollmentService.js';
 
 class EnrollmentController {
     async enrollStudent(req, res) {
-        const { studentId, courseId } = req.body;
+        const data = req.body;
         try {
-            const enrollment = await EnrollmentService.enrollStudent(studentId, courseId);
+            const enrollment = await EnrollmentService.enrollStudent(data);
             res.status(201).json(enrollment);
         } catch (error) {
             res.status(400).json({ message: error.message });

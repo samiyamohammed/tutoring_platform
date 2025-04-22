@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from "@/lib/auth-provider";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -28,6 +29,7 @@ export default function SignInPage() {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
 
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -36,34 +38,62 @@ export default function SignInPage() {
     },
   })
 
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-
+    setIsLoading(true);
+    
     try {
-      // This would be replaced with actual API call
-      console.log(values)
+        // 1. Make the API call
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(values),
+        });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+        // 2. Handle non-successful responses
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Login failed');
+        }
 
-      // For demo purposes, redirect based on email pattern
-      if (values.email.includes("admin")) {
-        router.push("/admin/dashboard")
-      } else if (values.email.includes("tutor")) {
-        router.push("/tutor/dashboard")
-      } else {
-        router.push("/student/dashboard")
-      }
+        // 3. Process successful response
+        const responseData = await response.json();
+        const userData = responseData.token.user; // Accessing user data from the new structure
+        console.log('Login successful:', userData);
+
+        // 4. Store token and user data
+        localStorage.setItem("token", responseData.token.token); // Store token
+        localStorage.setItem("user", JSON.stringify(userData)); // Store user data
+
+        // 5. Redirect based on role
+        const roleRedirects = {
+            admin: "/admin/dashboard",
+            tutor: "/tutor/dashboard", 
+            student: "/student/dashboard",
+            default: "/" // Fallback route
+        };
+
+        const redirectPath = roleRedirects[userData.role as keyof typeof roleRedirects] || roleRedirects.default;
+        console.log('Redirecting to:', redirectPath);
+        
+        // 6. Force a full page reload to ensure auth state is updated
+        window.location.href = redirectPath;
+        // Alternatively, if you prefer SPA navigation:
+        // router.push(redirectPath).then(() => window.location.reload());
+
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid email or password. Please try again.",
-      })
+        console.error('Login error:', error);
+        toast({
+            variant: "destructive",
+            title: "Login Failed",
+            description: error instanceof Error ? error.message : "An unexpected error occurred",
+        });
     } finally {
-      setIsLoading(false)
+        setIsLoading(false);
     }
-  }
+}
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">

@@ -4,9 +4,9 @@ import UserRepository from '../../infrastructure/repositories/UserRepository.js'
 
 class EnrollmentService {
     // Enroll student in a course
-    async enrollStudent(studentId, courseId) {
-        const course = await CourseRepository.findById(courseId);
-        const student = await UserRepository.findById(studentId);
+    async enrollStudent(data) {
+        const course = await CourseRepository.findById(data.course);
+        const student = await UserRepository.findById(data.student);
 
         if (!course) {
             throw new Error('Course not found');
@@ -17,16 +17,12 @@ class EnrollmentService {
         }
 
         // Check if student is already enrolled in the course
-        const existingEnrollment = await EnrollmentRepository.findByStudentId(studentId);
-        if (existingEnrollment.some(enrollment => enrollment.course.toString() === courseId)) {
+        const existingEnrollment = await EnrollmentRepository.findByStudentId(student);
+        if (existingEnrollment.some(enrollment => enrollment.course.toString() === course)) {
             throw new Error('Student is already enrolled in this course');
         }
 
-        const enrollmentData = {
-            student: studentId,
-            course: courseId,
-            enrollmentStatus: [{ status: 'enrolled' }]
-        };
+        const enrollmentData = data;
 
         return await EnrollmentRepository.create(enrollmentData);
     }

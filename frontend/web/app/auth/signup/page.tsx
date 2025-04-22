@@ -53,30 +53,44 @@ export default function SignUpPage() {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true)
-
+    setIsLoading(true);
+  
     try {
-      // This would be replaced with actual API call
-      console.log(values)
-
+      // Merge firstName and lastName into a single name attribute
+      const { firstName, lastName, ...rest } = values;
+      const formattedData = {
+        ...rest,
+        name: `${firstName} ${lastName}`, // Combine first and last name
+      };
+  
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formattedData),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to create account');
+      }
+  
       toast({
         title: "Account created!",
         description: "Please check your email to verify your account.",
-      })
-
+      });
+  
       // Redirect to verification page
-      router.push(`/auth/verify?email=${encodeURIComponent(values.email)}`)
+      router.push(`/auth/signin`);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Something went wrong. Please try again.",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { BookOpen, Filter, Search, Star, Users } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,179 +25,66 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 
-// Mock data for courses
-const courses = [
-  {
-    id: 1,
-    title: "Advanced JavaScript Programming",
-    description: "Master modern JavaScript concepts and techniques for web development.",
-    category: "Programming",
-    level: "Advanced",
-    tutor: {
-      name: "John Smith",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.9,
-    },
-    students: 24,
-    maxStudents: 30,
-    rating: 4.8,
-    reviews: 18,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 49.99,
-      group: 99.99,
-      oneOnOne: 199.99,
-    },
-    tags: ["JavaScript", "Web Development", "ES6+"],
-  },
-  {
-    id: 2,
-    title: "UI/UX Design Fundamentals",
-    description: "Learn the principles of user interface and experience design.",
-    category: "Design",
-    level: "Beginner",
-    tutor: {
-      name: "Sarah Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.7,
-    },
-    students: 18,
-    maxStudents: 25,
-    rating: 4.6,
-    reviews: 12,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: false,
-    },
-    pricing: {
-      online: 39.99,
-      group: 89.99,
-      oneOnOne: 0,
-    },
-    tags: ["UI Design", "UX Design", "Figma"],
-  },
-  {
-    id: 3,
-    title: "Data Science with Python",
-    description: "Explore data analysis, visualization, and machine learning with Python.",
-    category: "Data Science",
-    level: "Intermediate",
-    tutor: {
-      name: "Michael Brown",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.8,
-    },
-    students: 15,
-    maxStudents: 20,
-    rating: 4.7,
-    reviews: 9,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 59.99,
-      group: 119.99,
-      oneOnOne: 249.99,
-    },
-    tags: ["Python", "Data Science", "Machine Learning"],
-  },
-  {
-    id: 4,
-    title: "Mobile App Development with React Native",
-    description: "Build cross-platform mobile applications using React Native.",
-    category: "Programming",
-    level: "Intermediate",
-    tutor: {
-      name: "Emily Davis",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.6,
-    },
-    students: 12,
-    maxStudents: 20,
-    rating: 4.5,
-    reviews: 8,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: false,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 54.99,
-      group: 0,
-      oneOnOne: 219.99,
-    },
-    tags: ["React Native", "Mobile Development", "JavaScript"],
-  },
-  {
-    id: 5,
-    title: "Digital Marketing Masterclass",
-    description: "Learn effective digital marketing strategies for business growth.",
-    category: "Marketing",
-    level: "All Levels",
-    tutor: {
-      name: "Robert Wilson",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.9,
-    },
-    students: 30,
-    maxStudents: 50,
-    rating: 4.9,
-    reviews: 25,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 69.99,
-      group: 129.99,
-      oneOnOne: 299.99,
-    },
-    tags: ["Digital Marketing", "SEO", "Social Media"],
-  },
-  {
-    id: 6,
-    title: "Machine Learning Fundamentals",
-    description: "Introduction to machine learning algorithms and applications.",
-    category: "Data Science",
-    level: "Advanced",
-    tutor: {
-      name: "Jennifer Lee",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.8,
-    },
-    students: 20,
-    maxStudents: 25,
-    rating: 4.7,
-    reviews: 15,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 79.99,
-      group: 149.99,
-      oneOnOne: 349.99,
-    },
-    tags: ["Machine Learning", "AI", "Python"],
-  },
-]
+interface Tutor {
+  _id: string
+  name: string
+  avatar?: string
+  rating: number
+}
+
+interface Pricing {
+  online?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+  group?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+  oneOnOne?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+}
+
+interface Course {
+  _id: string
+  title: string
+  description: string
+  category: string
+  level: string
+  tutor: Tutor
+  currentEnrollment: number
+  capacity: number
+  rating: number
+  reviews: number
+  image?: string
+  sessionTypes: string[]
+  pricing: Pricing
+  prerequisites: string[]
+  status: string
+  createdAt: string
+  updatedAt: string
+}
 
 export default function ExploreCoursesPage() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [levelFilter, setLevelFilter] = useState("all")
@@ -207,73 +95,88 @@ export default function ExploreCoursesPage() {
   })
   const [priceRange, setPriceRange] = useState([0, 350])
   const [sortBy, setSortBy] = useState("popular")
+  const { toast } = useToast()
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+        const response = await fetch('http://localhost:5000/api/course', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
+
+        if (!response.ok) throw new Error('Failed to fetch courses')
+
+        const data = await response.json()
+        setCourses(data)
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch courses",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourses()
+  }, [toast])
 
   // Filter courses based on search query and filters
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      course.prerequisites.some((prereq) => prereq.toLowerCase().includes(searchQuery.toLowerCase()))
 
     const matchesCategory = categoryFilter === "all" || course.category === categoryFilter
     const matchesLevel = levelFilter === "all" || course.level === levelFilter
 
     const matchesSessionType =
       (!sessionTypeFilters.online && !sessionTypeFilters.group && !sessionTypeFilters.oneOnOne) ||
-      (sessionTypeFilters.online && course.sessions.online) ||
-      (sessionTypeFilters.group && course.sessions.group) ||
-      (sessionTypeFilters.oneOnOne && course.sessions.oneOnOne)
+      (sessionTypeFilters.online && course.sessionTypes.includes('online')) ||
+      (sessionTypeFilters.group && course.sessionTypes.includes('group')) ||
+      (sessionTypeFilters.oneOnOne && course.sessionTypes.includes('oneOnOne'))
 
-    const lowestPrice = Math.min(
-      course.pricing.online || Number.POSITIVE_INFINITY,
-      course.pricing.group || Number.POSITIVE_INFINITY,
-      course.pricing.oneOnOne || Number.POSITIVE_INFINITY,
-    )
+    const prices = [
+      course.pricing.online?.price || 0,
+      course.pricing.group?.price || 0,
+      course.pricing.oneOnOne?.price || 0
+    ].filter(price => price > 0)
 
-    const highestPrice = Math.max(course.pricing.online || 0, course.pricing.group || 0, course.pricing.oneOnOne || 0)
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
 
     const matchesPrice =
-      (lowestPrice >= priceRange[0] && lowestPrice <= priceRange[1]) ||
-      (highestPrice >= priceRange[0] && highestPrice <= priceRange[1])
+      (minPrice >= priceRange[0] && minPrice <= priceRange[1]) ||
+      (maxPrice >= priceRange[0] && maxPrice <= priceRange[1])
 
     return matchesSearch && matchesCategory && matchesLevel && matchesSessionType && matchesPrice
   })
 
   // Sort courses
   const sortedCourses = [...filteredCourses].sort((a, b) => {
+    const getMinPrice = (course: Course) => {
+      const prices = [
+        course.pricing.online?.price || Infinity,
+        course.pricing.group?.price || Infinity,
+        course.pricing.oneOnOne?.price || Infinity
+      ]
+      return Math.min(...prices)
+    }
+
     switch (sortBy) {
       case "popular":
-        return b.students - a.students
+        return b.currentEnrollment - a.currentEnrollment
       case "rating":
         return b.rating - a.rating
       case "newest":
-        return b.id - a.id
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       case "priceAsc":
-        return (
-          Math.min(
-            a.pricing.online || Number.POSITIVE_INFINITY,
-            a.pricing.group || Number.POSITIVE_INFINITY,
-            a.pricing.oneOnOne || Number.POSITIVE_INFINITY,
-          ) -
-          Math.min(
-            b.pricing.online || Number.POSITIVE_INFINITY,
-            b.pricing.group || Number.POSITIVE_INFINITY,
-            b.pricing.oneOnOne || Number.POSITIVE_INFINITY,
-          )
-        )
+        return getMinPrice(a) - getMinPrice(b)
       case "priceDesc":
-        return (
-          Math.min(
-            b.pricing.online || Number.POSITIVE_INFINITY,
-            b.pricing.group || Number.POSITIVE_INFINITY,
-            b.pricing.oneOnOne || Number.POSITIVE_INFINITY,
-          ) -
-          Math.min(
-            a.pricing.online || Number.POSITIVE_INFINITY,
-            a.pricing.group || Number.POSITIVE_INFINITY,
-            a.pricing.oneOnOne || Number.POSITIVE_INFINITY,
-          )
-        )
+        return getMinPrice(b) - getMinPrice(a)
       default:
         return 0
     }
@@ -288,6 +191,27 @@ export default function ExploreCoursesPage() {
       oneOnOne: false,
     })
     setPriceRange([0, 350])
+  }
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <StudentSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h1 className="text-lg font-semibold">Explore Courses</h1>
+                <p className="text-sm text-muted-foreground">Discover courses from top tutors</p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
   }
 
   return (
@@ -347,11 +271,9 @@ export default function ExploreCoursesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Categories</SelectItem>
-                          <SelectItem value="Programming">Programming</SelectItem>
-                          <SelectItem value="Design">Design</SelectItem>
-                          <SelectItem value="Data Science">Data Science</SelectItem>
-                          <SelectItem value="Marketing">Marketing</SelectItem>
-                          <SelectItem value="Business">Business</SelectItem>
+                          {Array.from(new Set(courses.map(course => course.category))).map(category => (
+                            <SelectItem key={category} value={category}>{category}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -363,9 +285,9 @@ export default function ExploreCoursesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Levels</SelectItem>
-                          <SelectItem value="Beginner">Beginner</SelectItem>
-                          <SelectItem value="Intermediate">Intermediate</SelectItem>
-                          <SelectItem value="Advanced">Advanced</SelectItem>
+                          {Array.from(new Set(courses.map(course => course.level))).map(level => (
+                            <SelectItem key={level} value={level}>{level}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -508,7 +430,7 @@ export default function ExploreCoursesPage() {
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {sortedCourses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
+                    <CourseCard key={course._id} course={course} />
                   ))}
                 </div>
               )}
@@ -520,36 +442,11 @@ export default function ExploreCoursesPage() {
   )
 }
 
-interface Course {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  level: string;
-  tutor: {
-    name: string;
-    avatar: string;
-    rating: number;
-  };
-  students: number;
-  maxStudents: number;
-  rating: number;
-  reviews: number;
-  image: string;
-  sessions: {
-    online: boolean;
-    group: boolean;
-    oneOnOne: boolean;
-  };
-  pricing: {
-    online: number;
-    group: number;
-    oneOnOne: number;
-  };
-  tags: string[];
-}
-
 function CourseCard({ course }: { course: Course }) {
+  const hasOnline = course.sessionTypes.includes('online')
+  const hasGroup = course.sessionTypes.includes('group')
+  const hasOneOnOne = course.sessionTypes.includes('oneOnOne')
+
   return (
     <Card className="overflow-hidden flex flex-col h-full">
       <div className="aspect-video w-full overflow-hidden">
@@ -570,10 +467,12 @@ function CourseCard({ course }: { course: Course }) {
       <CardContent className="p-4 pt-2 flex-grow">
         <div className="flex items-center gap-2 mb-2">
           <Avatar className="h-6 w-6">
-            <AvatarImage src={course.tutor.avatar || "/placeholder.svg"} alt={course.tutor.name} />
-            <AvatarFallback>{course.tutor.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={course.tutor?.avatar || "/placeholder.svg"} alt={course.tutor?.name || "Tutor"} />
+            <AvatarFallback>
+              {course.tutor?.name?.charAt(0) || "T"}
+            </AvatarFallback>
           </Avatar>
-          <span className="text-sm">{course.tutor.name}</span>
+          <span className="text-sm">{course.tutor?.name || "Tutor Name"}</span>
           <div className="flex items-center ml-auto">
             <Star className="h-4 w-4 fill-primary text-primary" />
             <span className="text-sm font-medium ml-1">{course.rating}</span>
@@ -581,32 +480,32 @@ function CourseCard({ course }: { course: Course }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-3">
-          {course.sessions.online && (
+          {hasOnline && course.pricing.online && (
             <Badge variant="secondary" className="bg-background">
-              Online: ${course.pricing.online}
+              Online: ${course.pricing.online.price}
             </Badge>
           )}
-          {course.sessions.group && (
+          {hasGroup && course.pricing.group && (
             <Badge variant="secondary" className="bg-background">
-              Group: ${course.pricing.group}
+              Group: ${course.pricing.group.price}
             </Badge>
           )}
-          {course.sessions.oneOnOne && (
+          {hasOneOnOne && course.pricing.oneOnOne && (
             <Badge variant="secondary" className="bg-background">
-              1-on-1: ${course.pricing.oneOnOne}
+              1-on-1: ${course.pricing.oneOnOne.price}
             </Badge>
           )}
         </div>
         <div className="flex items-center text-sm text-muted-foreground mt-3">
           <Users className="h-4 w-4 mr-1" />
           <span>
-            {course.students}/{course.maxStudents} students
+            {course.currentEnrollment}/{course.capacity} students
           </span>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 mt-auto">
         <Button className="w-full" asChild>
-          <Link href={`/student/checkout/${course.id}`}>Enroll Now</Link>
+          <Link href={`/student/checkout/${course._id}`}>Enroll</Link>
         </Button>
       </CardFooter>
     </Card>

@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Info } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,81 +17,177 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import DirectChapaButton from "@/components/payment/direct-chapa-button"
 
-// Mock data for courses
-const courses = [
-  {
-    id: "1",
-    title: "Advanced JavaScript Programming",
-    description: "Master modern JavaScript concepts and techniques for web development.",
-    category: "Programming",
-    level: "Advanced",
-    tutor: {
-      name: "John Smith",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.9,
-    },
-    students: 24,
-    maxStudents: 30,
-    rating: 4.8,
-    reviews: 18,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: true,
-    },
-    pricing: {
-      online: 49.99,
-      group: 99.99,
-      oneOnOne: 199.99,
-    },
-    tags: ["JavaScript", "Web Development", "ES6+"],
-  },
-  {
-    id: "2",
-    title: "UI/UX Design Fundamentals",
-    description: "Learn the principles of user interface and experience design.",
-    category: "Design",
-    level: "Beginner",
-    tutor: {
-      name: "Sarah Johnson",
-      avatar: "/placeholder.svg?height=40&width=40",
-      rating: 4.7,
-    },
-    students: 18,
-    maxStudents: 25,
-    rating: 4.6,
-    reviews: 12,
-    image: "/placeholder.svg?height=150&width=300",
-    sessions: {
-      online: true,
-      group: true,
-      oneOnOne: false,
-    },
-    pricing: {
-      online: 39.99,
-      group: 89.99,
-      oneOnOne: 0,
-    },
-    tags: ["UI Design", "UX Design", "Figma"],
-  },
-  // More courses...
-]
+interface Tutor {
+  name: string
+  avatar?: string
+  rating: number
+}
+
+interface Pricing {
+  online?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+  group?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+  oneOnOne?: {
+    price: number
+    maxStudents: number
+    schedule: Array<{
+      day: string
+      startTime: string
+      endTime: string
+    }>
+  }
+}
+
+interface Course {
+  _id: string
+  title: string
+  description: string
+  category: string
+  level: string
+  tutor: Tutor
+  currentEnrollment: number
+  capacity: number
+  rating: number
+  reviews: number
+  image?: string
+  sessionTypes: string[]
+  pricing: Pricing
+  prerequisites: string[]
+  status: string
+  createdAt: string
+  updatedAt: string
+}
 
 export default function CheckoutPage() {
   const params = useParams()
   const router = useRouter()
+  const { toast } = useToast()
   const courseId = params.courseId as string
-  const course = courses.find((c) => c.id === courseId) || courses[0]
 
+  const [course, setCourse] = (useState<Course | null>(null))
+  const [loading, setLoading] = useState(true)
   const [paymentOption, setPaymentOption] = useState("full")
   const [sessionType, setSessionType] = useState("online")
   const [paymentError, setPaymentError] = useState("")
 
+  useEffect(() => {
+    const fetchCourse = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+        const response = await fetch(`http://localhost:5000/api/course/${courseId}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
+
+        if (!response.ok) throw new Error('Failed to fetch course details')
+
+        const data = await response.json()
+        setCourse(data)
+        // Set default session type to first available option
+        if (data.sessionTypes.length > 0) {
+          setSessionType(data.sessionTypes[0])
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to fetch course details",
+        })
+        router.push("/student/explore")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCourse()
+  }, [courseId, router, toast])
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <StudentSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/student/explore">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Back</span>
+                  </Link>
+                </Button>
+                <div>
+                  <h1 className="text-lg font-semibold">Checkout</h1>
+                  <p className="text-sm text-muted-foreground">Complete your enrollment</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
+  }
+
+  if (!course) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <StudentSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" asChild>
+                  <Link href="/student/explore">
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="sr-only">Back</span>
+                  </Link>
+                </Button>
+                <div>
+                  <h1 className="text-lg font-semibold">Checkout</h1>
+                  <p className="text-sm text-muted-foreground">Complete your enrollment</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <Alert variant="destructive" className="max-w-md">
+                <AlertTitle>Course Not Found</AlertTitle>
+                <AlertDescription>
+                  The course you're trying to enroll in could not be found. Please return to the courses page and try again.
+                </AlertDescription>
+              </Alert>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    )
+  }
+
   // Calculate prices based on selected options
-  const basePrice = course.pricing[sessionType as keyof typeof course.pricing] || course.pricing.online
+  const basePrice = course.pricing[sessionType as keyof typeof course.pricing]?.price || 0
   const installmentPrice = Math.round((basePrice / 3) * 100) / 100
   const totalPrice = paymentOption === "full" ? basePrice : installmentPrice
+
+  // Check if selected session type is available
+  const isSessionTypeAvailable = (type: string) => {
+    return course.sessionTypes.includes(type) && course.pricing[type as keyof typeof course.pricing]?.price
+  }
 
   return (
     <SidebarProvider>
@@ -152,24 +249,30 @@ export default function CheckoutPage() {
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <h3 className="font-medium">Session Type</h3>
-                      <Tabs defaultValue="online" value={sessionType} onValueChange={setSessionType}>
-                        <TabsList className="grid w-full grid-cols-3">
-                          {course.sessions.online && (
+                      <Tabs 
+                        defaultValue={course.sessionTypes[0]} 
+                        value={sessionType} 
+                        onValueChange={setSessionType}
+                      >
+                        <TabsList className="grid w-full" style={{ 
+                          gridTemplateColumns: `repeat(${course.sessionTypes.length}, minmax(0, 1fr))` 
+                        }}>
+                          {isSessionTypeAvailable('online') && (
                             <TabsTrigger value="online">
                               Online Course
-                              <span className="ml-1 text-xs">${course.pricing.online}</span>
+                              <span className="ml-1 text-xs">${course.pricing.online?.price}</span>
                             </TabsTrigger>
                           )}
-                          {course.sessions.group && (
+                          {isSessionTypeAvailable('group') && (
                             <TabsTrigger value="group">
                               Group Sessions
-                              <span className="ml-1 text-xs">${course.pricing.group}</span>
+                              <span className="ml-1 text-xs">${course.pricing.group?.price}</span>
                             </TabsTrigger>
                           )}
-                          {course.sessions.oneOnOne && (
+                          {isSessionTypeAvailable('oneOnOne') && (
                             <TabsTrigger value="oneOnOne">
                               1-on-1 Sessions
-                              <span className="ml-1 text-xs">${course.pricing.oneOnOne}</span>
+                              <span className="ml-1 text-xs">${course.pricing.oneOnOne?.price}</span>
                             </TabsTrigger>
                           )}
                         </TabsList>
@@ -246,11 +349,11 @@ export default function CheckoutPage() {
                   <CardFooter className="flex flex-col space-y-4">
                     <DirectChapaButton
                       amount={totalPrice}
-                      email="mikiengida52@gmail.com" // Use a valid email format
-                      firstName="Test"
-                      lastName="User"
+                      email="student@example.com" // Replace with actual user email
+                      firstName="Student" // Replace with actual user first name
+                      lastName="User" // Replace with actual user last name
                       title={`${course.title} - ${sessionType} ${paymentOption === "installment" ? "(Installment 1/3)" : ""}`}
-                      currency="ETB" // Use ETB (Ethiopian Birr) as required by Chapa
+                      currency="ETB"
                       onError={(error) => setPaymentError(error)}
                     />
                     <div className="text-center text-sm text-muted-foreground">

@@ -3,12 +3,17 @@ import ModuleService from '../../application/services/ModuleService.js';
 class ModuleController {
     async getAll(req, res) {
         try {
-            const modules = await ModuleService.getAllModules();
+            const { course } = req.query;
+    
+            const modules = course
+                ? await ModuleService.getModulesByCourse(course)
+                : await ModuleService.getAllModules();
+    
             res.status(200).json(modules);
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
-    }
+    }    
 
     async getById(req, res) {
         try {

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { CalendarIcon, DollarSign } from "lucide-react"
+import { CalendarIcon, DollarSign, Plus, Trash2, Loader2 } from "lucide-react"
+import debounce from "lodash.debounce"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,24 +40,67 @@ const formSchema = z.object({
   deadline: z.date({
     required_error: "Please select a completion deadline.",
   }),
-  maxStudents: z.coerce.number().min(1, {
-    message: "At least 1 student is required.",
-  }),
   sessionTypes: z.array(z.string()).min(1, {
     message: "At least one session type is required.",
   }),
   pricing: z.object({
-    online: z.coerce.number().min(0, {
-      message: "Price cannot be negative.",
-    }),
-    group: z.coerce.number().min(0, {
-      message: "Price cannot be negative.",
-    }),
-    oneOnOne: z.coerce.number().min(0, {
-      message: "Price cannot be negative.",
-    }),
+    online: z.object({
+      price: z.coerce.number().min(0, {
+        message: "Price cannot be negative.",
+      }),
+      maxStudents: z.coerce.number().min(1, {
+        message: "At least 1 student is required for online sessions.",
+      }),
+      schedule: z.array(z.object({
+        day: z.string(),
+        startTime: z.string(),
+        endTime: z.string(),
+      })).min(0),
+    }).optional(),
+    group: z.object({
+      price: z.coerce.number().min(0, {
+        message: "Price cannot be negative.",
+      }),
+      maxStudents: z.coerce.number().min(1, {
+        message: "At least 1 student is required for group sessions.",
+      }),
+      schedule: z.array(z.object({
+        day: z.string(),
+        startTime: z.string(),
+        endTime: z.string(),
+      })).min(1),
+    }).optional(),
+    oneOnOne: z.object({
+      price: z.coerce.number().min(0, {
+        message: "Price cannot be negative.",
+      }),
+      maxStudents: z.coerce.number().min(1, {
+        message: "At least 1 student is required for one-on-one sessions.",
+      }),
+      schedule: z.array(z.object({
+        day: z.string(),
+        startTime: z.string(),
+        endTime: z.string(),
+      })).min(1),
+    }).optional(),
   }),
 })
+
+const daysOfWeek = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday"
+]
+
+const sessionTypes = [
+  { id: "online", label: "Online Course" },
+  { id: "group", label: "Group Sessions" },
+  { id: "oneOnOne", label: "One-on-One Sessions" },
+]
 
 export default function CreateCoursePage() {
   const router = useRouter()
@@ -71,48 +115,241 @@ export default function CreateCoursePage() {
       description: "",
       category: "",
       level: "",
-      maxStudents: 10,
+      deadline: undefined,
       sessionTypes: ["online"],
       pricing: {
-        online: 49.99,
-        group: 99.99,
-        oneOnOne: 199.99,
+        online: {
+          price: 49.99,
+          maxStudents: 100,
+          schedule: [{ day: "Monday", startTime: "09:00", endTime: "10:00" }]
+        },
+        group: {
+          price: 0,
+          maxStudents: 10,
+          schedule: []
+        },
+        oneOnOne: {
+          price: 0,
+          maxStudents: 1,
+          schedule: []
+        }
       },
     },
+    mode: "onBlur",
   })
 
-  const sessionTypes = [
-    { id: "online", label: "Online Course" },
-    { id: "group", label: "Group Sessions" },
-    { id: "oneOnOne", label: "One-on-One Sessions" },
-  ]
+  const watchSessionTypes = form.watch("sessionTypes")
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsSubmitting(true)
+  // Memoize expensive computations
+  const onlineSchedule = useMemo(() => form.watch("pricing.online.schedule"), [form])
+  const groupSchedule = useMemo(() => form.watch("pricing.group.schedule"), [form])
+  const oneOnOneSchedule = useMemo(() => form.watch("pricing.oneOnOne.schedule"), [form])
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
 
     try {
-      // This would be replaced with actual API call
-      console.log(values)
+      const payload = {
+        title: values.title,
+        description: values.description,
+        category: values.category,
+        level: values.level,
+        deadline: new Date(values.deadline),
+        sessionTypes: values.sessionTypes,
+        pricing: {
+          ...(values.sessionTypes.includes("online") && values.pricing.online && {
+            online: {
+              price: values.pricing.online.price,
+              maxStudents: values.pricing.online.maxStudents,
+              schedule: values.pricing.online.schedule.map(schedule => ({
+                day: schedule.day,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          }),
+          ...(values.sessionTypes.includes("group") && values.pricing.group && {
+            group: {
+              price: values.pricing.group.price,
+              maxStudents: values.pricing.group.maxStudents,
+              schedule: values.pricing.group.schedule.map(schedule => ({
+                day: schedule.day,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          }),
+          ...(values.sessionTypes.includes("oneOnOne") && values.pricing.oneOnOne && {
+            oneOnOne: {
+              price: values.pricing.oneOnOne.price,
+              maxStudents: values.pricing.oneOnOne.maxStudents,
+              schedule: values.pricing.oneOnOne.schedule.map(schedule => ({
+                day: schedule.day,
+                startTime: schedule.startTime,
+                endTime: schedule.endTime,
+              })),
+            },
+          }),
+        },
+      };
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : '';
+      
+      const response = await fetch('http://localhost:5000/api/course', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create course');
+      }
 
+      const data = await response.json();
       toast({
         title: "Course created successfully",
         description: "Your new course has been created and is ready for content.",
-      })
-
-      // Redirect to course content page
-      router.push("/tutor/courses")
+      });
+      router.push(`/tutor/dashboard`);
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create course. Please try again.",
-      })
+        description: error instanceof Error ? error.message : "Failed to create course",
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
+  };
+
+  const addScheduleItem = (sessionType: "online" | "group" | "oneOnOne") => {
+    const currentSchedules = form.getValues(`pricing.${sessionType}.schedule`) || []
+    form.setValue(`pricing.${sessionType}.schedule`, [
+      ...currentSchedules,
+      { day: "Monday", startTime: "09:00", endTime: "10:00" }
+    ], { shouldValidate: true })
+  }
+
+  const removeScheduleItem = (sessionType: "online" | "group" | "oneOnOne", index: number) => {
+    const currentSchedules = form.getValues(`pricing.${sessionType}.schedule`) || []
+    if (currentSchedules.length <= 1) {
+      if (sessionType === "group" || sessionType === "oneOnOne") {
+        return
+      }
+    }
+    const newSchedules = currentSchedules.filter((_, i) => i !== index)
+    form.setValue(`pricing.${sessionType}.schedule`, newSchedules, { shouldValidate: true })
+  }
+
+  const handleInputChange = debounce((field: string, value: any) => {
+    form.setValue(field as any, value, { shouldValidate: true })
+  }, 300)
+
+  useEffect(() => {
+    return () => {
+      handleInputChange.cancel()
+    }
+  }, [handleInputChange])
+
+  const renderScheduleFields = (sessionType: "online" | "group" | "oneOnOne") => {
+    const schedules = form.watch(`pricing.${sessionType}.schedule`) || []
+    
+    return (
+      <div className="space-y-3">
+        {schedules.map((_, index) => (
+          <div key={index} className="flex flex-col gap-2 p-3 border rounded-md">
+            <div className="flex items-center gap-2">
+              <FormField
+                control={form.control}
+                name={`pricing.${sessionType}.schedule.${index}.day`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value)
+                        handleInputChange(`pricing.${sessionType}.schedule.${index}.day`, value)
+                      }}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select day" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {daysOfWeek.map(day => (
+                          <SelectItem key={day} value={day}>{day}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removeScheduleItem(sessionType, index)}
+              >
+                <Trash2 className="h-4 w-4 text-red-500" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <FormField
+                control={form.control}
+                name={`pricing.${sessionType}.schedule.${index}.startTime`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e)
+                          handleInputChange(`pricing.${sessionType}.schedule.${index}.startTime`, e.target.value)
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={`pricing.${sessionType}.schedule.${index}.endTime`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Time</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="time"
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e)
+                          handleInputChange(`pricing.${sessionType}.schedule.${index}.endTime`, e.target.value)
+                        }}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-2"
+          onClick={() => addScheduleItem(sessionType)}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Time Slot
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -133,8 +370,9 @@ export default function CreateCoursePage() {
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="basic">Basic Information</TabsTrigger>
                     <TabsTrigger value="sessions">Session Types</TabsTrigger>
-                    <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                    <TabsTrigger value="pricing">Pricing & Schedule</TabsTrigger>
                   </TabsList>
+
                   <TabsContent value="basic" className="space-y-4">
                     <Card>
                       <CardHeader>
@@ -147,9 +385,17 @@ export default function CreateCoursePage() {
                           name="title"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Course Title</FormLabel>
+                              <FormLabel htmlFor="course-title">Course Title</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g. Advanced JavaScript for Web Developers" {...field} />
+                                <Input
+                                  id="course-title"
+                                  placeholder="e.g. Advanced JavaScript for Web Developers"
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e)
+                                    handleInputChange("title", e.target.value)
+                                  }}
+                                />
                               </FormControl>
                               <FormDescription>A clear and concise title for your course.</FormDescription>
                               <FormMessage />
@@ -161,12 +407,17 @@ export default function CreateCoursePage() {
                           name="description"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Course Description</FormLabel>
+                              <FormLabel htmlFor="course-description">Course Description</FormLabel>
                               <FormControl>
                                 <Textarea
+                                  id="course-description"
                                   placeholder="Describe what students will learn in this course..."
                                   className="min-h-[120px]"
                                   {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e)
+                                    handleInputChange("description", e.target.value)
+                                  }}
                                 />
                               </FormControl>
                               <FormDescription>
@@ -182,10 +433,16 @@ export default function CreateCoursePage() {
                             name="category"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Category</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormLabel htmlFor="course-category">Category</FormLabel>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value)
+                                    handleInputChange("category", value)
+                                  }}
+                                  defaultValue={field.value}
+                                >
                                   <FormControl>
-                                    <SelectTrigger>
+                                    <SelectTrigger id="course-category">
                                       <SelectValue placeholder="Select a category" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -210,10 +467,16 @@ export default function CreateCoursePage() {
                             name="level"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Difficulty Level</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormLabel htmlFor="course-level">Difficulty Level</FormLabel>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value)
+                                    handleInputChange("level", value)
+                                  }}
+                                  defaultValue={field.value}
+                                >
                                   <FormControl>
-                                    <SelectTrigger>
+                                    <SelectTrigger id="course-level">
                                       <SelectValue placeholder="Select a level" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -236,11 +499,12 @@ export default function CreateCoursePage() {
                             name="deadline"
                             render={({ field }) => (
                               <FormItem className="flex flex-col">
-                                <FormLabel>Completion Deadline</FormLabel>
+                                <FormLabel htmlFor="course-deadline">Completion Deadline</FormLabel>
                                 <Popover>
                                   <PopoverTrigger asChild>
                                     <FormControl>
                                       <Button
+                                        id="course-deadline"
                                         variant={"outline"}
                                         className={cn(
                                           "w-full pl-3 text-left font-normal",
@@ -256,7 +520,10 @@ export default function CreateCoursePage() {
                                     <Calendar
                                       mode="single"
                                       selected={field.value}
-                                      onSelect={field.onChange}
+                                      onSelect={(date) => {
+                                        field.onChange(date)
+                                        if (date) handleInputChange("deadline", date)
+                                      }}
                                       disabled={(date) => date < new Date()}
                                       initialFocus
                                     />
@@ -264,22 +531,6 @@ export default function CreateCoursePage() {
                                 </Popover>
                                 <FormDescription>
                                   The date by which students should complete the course.
-                                </FormDescription>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="maxStudents"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Maximum Students</FormLabel>
-                                <FormControl>
-                                  <Input type="number" min={1} {...field} />
-                                </FormControl>
-                                <FormDescription>
-                                  The maximum number of students allowed in your course.
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -297,6 +548,7 @@ export default function CreateCoursePage() {
                       </CardFooter>
                     </Card>
                   </TabsContent>
+
                   <TabsContent value="sessions" className="space-y-4">
                     <Card>
                       <CardHeader>
@@ -329,17 +581,22 @@ export default function CreateCoursePage() {
                                         >
                                           <FormControl>
                                             <Checkbox
+                                              id={`session-type-${item.id}`}
                                               checked={field.value?.includes(item.id)}
                                               onCheckedChange={(checked) => {
                                                 const current = field.value || []
-                                                return checked
-                                                  ? field.onChange([...current, item.id])
-                                                  : field.onChange(current.filter((value) => value !== item.id))
+                                                const newValue = checked
+                                                  ? [...current, item.id]
+                                                  : current.filter((value) => value !== item.id)
+                                                field.onChange(newValue)
+                                                handleInputChange("sessionTypes", newValue)
                                               }}
                                             />
                                           </FormControl>
                                           <div className="space-y-1 leading-none">
-                                            <FormLabel className="text-base">{item.label}</FormLabel>
+                                            <FormLabel htmlFor={`session-type-${item.id}`} className="text-base">
+                                              {item.label}
+                                            </FormLabel>
                                             {item.id === "online" && (
                                               <FormDescription>
                                                 Pre-recorded videos and materials that students can access anytime.
@@ -372,86 +629,211 @@ export default function CreateCoursePage() {
                           Previous: Basic Information
                         </Button>
                         <Button type="button" onClick={() => setActiveTab("pricing")}>
-                          Next: Pricing
+                          Next: Pricing & Schedule
                         </Button>
                       </CardFooter>
                     </Card>
                   </TabsContent>
+
                   <TabsContent value="pricing" className="space-y-4">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Pricing</CardTitle>
-                        <CardDescription>Set the pricing for each session type</CardDescription>
+                        <CardTitle>Pricing & Schedule</CardTitle>
+                        <CardDescription>Set the pricing and schedule for each session type</CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid gap-6">
-                          {form.watch("sessionTypes")?.includes("online") && (
-                            <FormField
-                              control={form.control}
-                              name="pricing.online"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Online Course Price ($)</FormLabel>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                      <Input type="number" min={0} step={0.01} className="pl-9" {...field} />
-                                    </div>
-                                  </FormControl>
-                                  <FormDescription>
-                                    Price for access to pre-recorded content and materials.
-                                  </FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                          {form.watch("sessionTypes")?.includes("group") && (
-                            <FormField
-                              control={form.control}
-                              name="pricing.group"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Group Session Price ($)</FormLabel>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                      <Input type="number" min={0} step={0.01} className="pl-9" {...field} />
-                                    </div>
-                                  </FormControl>
-                                  <FormDescription>Price per student for group sessions.</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                          {form.watch("sessionTypes")?.includes("oneOnOne") && (
-                            <FormField
-                              control={form.control}
-                              name="pricing.oneOnOne"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>One-on-One Session Price ($)</FormLabel>
-                                  <FormControl>
-                                    <div className="relative">
-                                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                      <Input type="number" min={0} step={0.01} className="pl-9" {...field} />
-                                    </div>
-                                  </FormControl>
-                                  <FormDescription>Price per hour for private one-on-one sessions.</FormDescription>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          )}
-                        </div>
+                      <CardContent className="space-y-8">
+                        {watchSessionTypes.includes("online") && (
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Online Course</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField
+                                control={form.control}
+                                name="pricing.online.price"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Price ($)</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          className="pl-9"
+                                          {...field}
+                                          onChange={(e) => {
+                                            field.onChange(e)
+                                            handleInputChange("pricing.online.price", e.target.value)
+                                          }}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="pricing.online.maxStudents"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Max Students</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        {...field}
+                                        onChange={(e) => {
+                                          field.onChange(e)
+                                          handleInputChange("pricing.online.maxStudents", e.target.value)
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <FormLabel>Schedule</FormLabel>
+                              {renderScheduleFields("online")}
+                            </div>
+                          </div>
+                        )}
+
+                        {watchSessionTypes.includes("group") && (
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Group Sessions</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField
+                                control={form.control}
+                                name="pricing.group.price"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Price ($)</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          className="pl-9"
+                                          {...field}
+                                          onChange={(e) => {
+                                            field.onChange(e)
+                                            handleInputChange("pricing.group.price", e.target.value)
+                                          }}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="pricing.group.maxStudents"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Max Students</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        {...field}
+                                        onChange={(e) => {
+                                          field.onChange(e)
+                                          handleInputChange("pricing.group.maxStudents", e.target.value)
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <FormLabel>Schedule</FormLabel>
+                              {renderScheduleFields("group")}
+                            </div>
+                          </div>
+                        )}
+
+                        {watchSessionTypes.includes("oneOnOne") && (
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">One-on-One Sessions</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField
+                                control={form.control}
+                                name="pricing.oneOnOne.price"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Price ($)</FormLabel>
+                                    <FormControl>
+                                      <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          step={0.01}
+                                          className="pl-9"
+                                          {...field}
+                                          onChange={(e) => {
+                                            field.onChange(e)
+                                            handleInputChange("pricing.oneOnOne.price", e.target.value)
+                                          }}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name="pricing.oneOnOne.maxStudents"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Max Students</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        {...field}
+                                        onChange={(e) => {
+                                          field.onChange(e)
+                                          handleInputChange("pricing.oneOnOne.maxStudents", e.target.value)
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div>
+                              <FormLabel>Schedule</FormLabel>
+                              {renderScheduleFields("oneOnOne")}
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                       <CardFooter className="flex justify-between">
                         <Button variant="outline" type="button" onClick={() => setActiveTab("sessions")}>
                           Previous: Session Types
                         </Button>
-                        <Button type="submit" disabled={isSubmitting}>
-                          {isSubmitting ? "Creating Course..." : "Create Course"}
+                        <Button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={() => onSubmit(form.getValues())}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating Course...
+                            </>
+                          ) : "Create Course"}
                         </Button>
                       </CardFooter>
                     </Card>
