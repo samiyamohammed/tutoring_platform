@@ -16,6 +16,11 @@ class ModuleService {
         return await ModuleRepository.create(moduleData);
     }
 
+    async getModulesByCourse(courseId) {
+        return await ModuleRepository.findByCourse(courseId);
+    }
+    
+
     async updateModule(id, userId, updateData) {
         const module = await ModuleRepository.findById(id);
         if (!module) throw new Error('Module not found');

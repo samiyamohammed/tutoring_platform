@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 import User from "./User.js"; // Adjust the path as necessary
 
 const TutorSchema = new mongoose.Schema({
-  qualification: { type: String, required: true },  // Degree, Certification, etc.
-  experience: { type: Number, required: true }, // Years of teaching experience
+  qualification: { type: String },  // Degree, Certification, etc.
+  experience: { type: Number  }, // Years of teaching experience
   subjects: [{ type: String }], // List of subjects they teach
-  resume: { type: String, required: true }, // Resume file URL
+  resume: { type: String }, // Resume file URL
   verification_status: {
     type: String,
     enum: ["pending", "approved", "rejected"],
