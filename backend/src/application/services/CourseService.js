@@ -15,7 +15,9 @@ class CourseService {
 
     async updateCourse(id, userId, updateData) {
         const course = await CourseRepository.findById(id);
-        if (!course || course.tutor.toString() !== userId) {
+        console.log('Course Tutor ID:', course.tutor._id.toString());
+        console.log('User ID:', userId);
+        if (!course || course.tutor._id.toString() !== userId.toString()) {
             throw new Error('Unauthorized: You are not the tutor of this course');
         }
         return await CourseRepository.update(id, updateData);
