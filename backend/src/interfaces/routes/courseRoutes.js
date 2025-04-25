@@ -12,34 +12,38 @@ router.get("/", courseController.getCourses);
 router.get("/:id", courseController.getCourseById);
 
 // Updated module creation with proper file handling
-router.post('/:courseId/modules', 
+router.post('/:courseId/modules',
   authenticate,
-  upload.array('files'),
+  upload.array('files'), // uses memoryStorage, so file.buffer is available
   async (req, res, next) => {
     try {
-      // Process uploaded files and add to GridFS
-      if (req.files) {
-        req.fileIds = [];
+      req.fileIds = [];
+
+      if (req.files && req.files.length > 0) {
         for (const file of req.files) {
-          const filename = file.filename;
-          const uploadStream = gfs.openUploadStream(filename, {
+          const uploadStream = gfs.openUploadStream(file.originalname, {
             contentType: file.mimetype,
-            metadata: req.user ? { uploadedBy: req.user._id } : null
+            metadata: {
+              uploadedBy: req.user?._id || null,
+              courseId: req.params.courseId // Optional: Store related info
+            }
           });
-          
+
+          // Push the uploaded file's ID to req.fileIds
           const fileId = await new Promise((resolve, reject) => {
+            uploadStream.end(file.buffer); // this triggers 'finish'
             uploadStream.on('finish', () => resolve(uploadStream.id));
             uploadStream.on('error', reject);
-            uploadStream.end(file.buffer);
           });
-          
+
           req.fileIds.push(fileId);
         }
       }
-      next();
+
+      next(); // Pass fileIds to your controller
     } catch (err) {
       console.error('File processing error:', err);
-      return res.status(500).json({ error: 'File processing failed' });
+      res.status(500).json({ error: 'File upload failed' });
     }
   },
   courseController.addModule
