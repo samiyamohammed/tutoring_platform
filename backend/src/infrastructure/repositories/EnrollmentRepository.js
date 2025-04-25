@@ -5,6 +5,10 @@ class EnrollmentRepository {
         return await Enrollment.create(enrollmentData);
     }
 
+    async findAll() {
+        return await Enrollment.find().populate('course student');
+    }
+
     async findById(id) {
         return await Enrollment.findById(id).populate('course student');
     }

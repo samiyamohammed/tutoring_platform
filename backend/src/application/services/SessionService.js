@@ -14,6 +14,10 @@ class SessionService {
     return await SessionRepository.findById(id);
   }
 
+  async getSessionsByUserId(userId) {
+    return await SessionRepository.findByUserId(userId);
+  }
+
   async updateSession(id, sessionData) {
     return await SessionRepository.update(id, sessionData);
   }

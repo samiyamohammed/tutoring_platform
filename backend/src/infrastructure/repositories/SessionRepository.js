@@ -14,6 +14,10 @@ class SessionRepository {
     return await SessionRequest.findById(id).populate('student tutor course');
   }
 
+  async findByUserId(userId) {
+    return await SessionRequest.find({ tutor: userId }).populate('student tutor course');
+  }
+
   async update(id, sessionData) {
     return await SessionRequest.findByIdAndUpdate(id, sessionData, { new: true });
   }

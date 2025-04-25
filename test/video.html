@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Video Chat Room</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    video {
+      width: 45%;
+      margin: 10px;
+      border: 2px solid #444;
+      border-radius: 10px;
+    }
+    #joinSection {
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="joinSection">
+    <input type="text" id="roomId" placeholder="Enter Room ID" />
+    <button onclick="joinRoom()">Join Video Room</button>
+  </div>
+
+  <div id="videos" style="display:none;">
+    <video id="localVideo" autoplay muted playsinline></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+
+  <!-- Load Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+  <script>
+    // === CONFIG ===
+    const BACKEND_URL = "http://localhost:5000"; // ← replace with your backend URL
+    const socket = io(BACKEND_URL);
+
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+
+    let localStream;
+    let peerConnection;
+    let roomId;
+
+    const iceConfig = {
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+    };
+
+    socket.on("connect", () => {
+      console.log("✅ Connected to Socket.IO with ID:", socket.id);
+    });
+
+    async function joinRoom() {
+      roomId = document.getElementById("roomId").value.trim();
+      if (!roomId) return alert("Please enter a room ID");
+
+      console.log("Joining room:", roomId);
+
+      try {
+        // Get camera/mic
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+
+        // Show video UI
+        document.getElementById("videos").style.display = "block";
+        document.getElementById("joinSection").style.display = "none";
+
+        // Notify backend
+        socket.emit("joinVideoRoom", roomId);
+        console.log("🔔 Emitted joinVideoRoom:", roomId);
+
+      } catch (err) {
+        console.error("❌ Media access error:", err);
+        alert("Could not access camera or microphone.");
+      }
+    }
+
+    socket.on("userJoined", async (otherSocketId) => {
+      console.log("👥 Another user joined:", otherSocketId);
+      await createPeerConnection(otherSocketId);
+
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+
+      socket.emit("videoOffer", { to: otherSocketId, offer });
+    });
+
+    socket.on("videoOffer", async ({ from, offer }) => {
+      console.log("📨 Received video offer from:", from);
+      await createPeerConnection(from);
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit("videoAnswer", { to: from, answer });
+    });
+
+    socket.on("videoAnswer", async ({ from, answer }) => {
+      console.log("📨 Received video answer from:", from);
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    socket.on("iceCandidate", async ({ from, candidate }) => {
+      if (candidate && peerConnection) {
+        console.log("📡 Adding ICE candidate from:", from);
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    async function createPeerConnection(remoteSocketId) {
+      if (peerConnection) return;
+
+      console.log("📞 Creating RTCPeerConnection...");
+      peerConnection = new RTCPeerConnection(iceConfig);
+
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+
+      peerConnection.ontrack = (event) => {
+        console.log("📺 Remote stream received");
+        remoteVideo.srcObject = event.streams[0];
+      };
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit("iceCandidate", {
+            to: remoteSocketId,
+            candidate: event.candidate
+          });
+        }
+      };
+    }
+  </script>
+</body>
+</html>
