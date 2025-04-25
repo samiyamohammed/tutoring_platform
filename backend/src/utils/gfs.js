@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { GridFSBucket } from 'mongodb';
 import connectDB from '../infrastructure/database/db.js';
 
+
 let gfs;
 let gridFSBucket;
 let gfsInitialized = false;
@@ -24,6 +25,7 @@ const initializeGridFS = async () => {
         return gridFSBucket.find(query).toArray();
       },
       openDownloadStream: (fileId) => {
+        console.log('Opening download stream for fileId:', fileId);
         return gridFSBucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
       }
     };

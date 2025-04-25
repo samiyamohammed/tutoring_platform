@@ -1,7 +1,9 @@
 import express from "express";
+import { ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import cors from "cors";
 import http from "http";
+import  { gfs }  from "./utils/multer-config.js"; // Import gfs from utils
 import mongoose from "mongoose";
 import connectDB from "./infrastructure/database/db.js";
 import userRoutes from "./interfaces/routes/userRoutes.js";
@@ -53,23 +55,78 @@ app.use("/api/course", authenticate, courseRoutes);
 // app.use("/api/quiz", authenticate, quizRoutes);
 app.use('/api/session', sessionRoutes);
 
-app.get('/files/:id', async (req, res) => {
-    try {
-      const fileId = new mongoose.Types.ObjectId(req.params.id);
-      const downloadStream = gfs.openDownloadStream(fileId);
-      
-      // Set proper headers based on file type (optional but recommended)
-      const file = await gfs.find({ _id: fileId }).toArray();
-      if (file.length > 0) {
-        res.set('Content-Type', file[0].contentType);
-        res.set('Content-Disposition', `inline; filename="${file[0].filename}"`);
-      }
-      
-      downloadStream.pipe(res);
-    } catch (err) {
-      res.status(404).json({ error: 'File not found' });
+app.get('/api/files/:id', async (req, res) => {
+  try {
+    const fileId = new mongoose.Types.ObjectId(req.params.id); // Convert to ObjectId
+
+    // Convert cursor to array
+    const files = await gfs.find({ _id: fileId }).toArray();
+    
+    if (!files || files.length === 0) {
+      return res.status(404).json({ message: 'File not found' });
     }
-  });
+
+    const file = files[0];
+
+    res.set('Content-Type', file.contentType || 'application/octet-stream');
+    res.set('Content-Disposition', `inline; filename="${file.filename}"`);
+
+    const downloadStream = gfs.openDownloadStream(fileId);
+    downloadStream.pipe(res);
+
+    downloadStream.on('error', (err) => {
+      console.error('Download stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error streaming file' });
+      }
+    });
+
+  } catch (err) {
+    console.error('Download file error:', err);
+    res.status(500).json({ error: 'Download failed', details: err.message });
+  }
+});
+
+app.get('/api/videos/stream/:id', async (req, res) => {
+  try {
+    const fileId = new mongoose.Types.ObjectId(req.params.id);
+    const files = await gfs.find({ _id: fileId }).toArray();
+    
+    if (!files || files.length === 0) {
+      return res.status(404).json({ message: 'File not found' });
+    }
+
+    const file = files[0];
+    
+    // Handle range requests for video streaming
+    const range = req.headers.range;
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : file.length - 1;
+      const chunkSize = (end - start) + 1;
+      
+      res.writeHead(206, {
+        'Content-Range': `bytes ${start}-${end}/${file.length}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': file.contentType
+      });
+      
+      const downloadStream = gfs.openDownloadStream(fileId, { start, end });
+      downloadStream.pipe(res);
+    } else {
+      res.set('Content-Length', file.length);
+      const downloadStream = gfs.openDownloadStream(fileId);
+      downloadStream.pipe(res);
+    }
+
+  } catch (err) {
+    console.error('Video streaming error:', err);
+    res.status(500).json({ error: 'Video streaming failed' });
+  }
+});
+
 
 
 const PORT = process.env.PORT || 5000;
