@@ -60,7 +60,7 @@ export default function SignInPage() {
 
         // 3. Process successful response
         const responseData = await response.json();
-        const userData = responseData.token.user; // Accessing user data from the new structure
+        const userData = responseData.token.user; 
         console.log('Login successful:', userData);
 
         // 4. Store token and user data

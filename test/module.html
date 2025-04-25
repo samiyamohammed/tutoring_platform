@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Upload Module with Multiple Sections</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .section {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+
+    .file-inputs {
+      margin-top: 10px;
+    }
+
+    button {
+      background: #333;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #555;
+    }
+
+    .add-section {
+      margin: 15px 0;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Upload Module with Multiple Sections</h2>
+  <form id="moduleForm" enctype="multipart/form-data">
+    <h3>Module Details</h3>
+    <label>Title:</label><br>
+    <input type="text" name="title" value="Intro to AI" required><br><br>
+
+    <label>Content:</label><br>
+    <textarea name="content" required>Learn about artificial intelligence</textarea><br><br>
+
+    <label>Order:</label><br>
+    <input type="number" name="order" value="1" min="1" required><br><br>
+
+    <label>Is Published:</label>
+    <input type="checkbox" name="isPublished" checked><br><br>
+
+    <h3>Sections</h3>
+    <div id="sectionsContainer">
+      <!-- Sections will be added here dynamically -->
+    </div>
+
+    <button type="button" class="add-section" onclick="addSection()">+ Add Section</button><br><br>
+
+    <button type="submit">Upload Module</button>
+    <div id="errorMessage" class="error"></div>
+  </form>
+
+  <script>
+    let sectionCount = 0;
+
+    // Add a new section
+    function addSection(type = 'text') {
+      const container = document.getElementById('sectionsContainer');
+      const sectionId = sectionCount++;
+
+      const sectionDiv = document.createElement('div');
+      sectionDiv.className = 'section';
+      sectionDiv.innerHTML = `
+        <h4>Section ${sectionId + 1}</h4>
+        <label>Section Title:</label><br>
+        <input type="text" name="section_title_${sectionId}" value="Section ${sectionId + 1}" required><br><br>
+        
+        <label>Order:</label><br>
+        <input type="number" name="section_order_${sectionId}" value="${sectionId + 1}" min="1" required><br><br>
+        
+        <label>Type:</label><br>
+        <select name="section_type_${sectionId}" onchange="updateSectionType(${sectionId})" required>
+          <option value="text">Text</option>
+          <option value="video">Video</option>
+          <option value="pdf">PDF</option>
+          <option value="quiz">Quiz</option>
+        </select><br><br>
+        
+        <div id="section_content_${sectionId}">
+          <!-- Content will change based on type -->
+          <label>Content:</label><br>
+          <textarea name="section_text_${sectionId}" required>Enter text content here</textarea><br>
+        </div>
+        
+        <div class="file-inputs" id="section_files_${sectionId}" style="display:none">
+          <label>Files:</label><br>
+          <input type="file" name="section_files_${sectionId}" multiple accept="${type === 'video' ? 'video/*' : 'application/pdf'}"><br>
+          <small>Select multiple ${type} files for this section</small>
+        </div>
+        
+        <button type="button" onclick="this.parentNode.remove()">Remove Section</button>
+      `;
+
+      container.appendChild(sectionDiv);
+    }
+
+    // Update section UI based on type selection
+    function updateSectionType(sectionId) {
+      const type = document.querySelector(`[name="section_type_${sectionId}"]`).value;
+      const contentDiv = document.getElementById(`section_content_${sectionId}`);
+      const filesDiv = document.getElementById(`section_files_${sectionId}`);
+      const fileInput = filesDiv.querySelector('input[type="file"]');
+
+      // Update accept attribute based on type
+      fileInput.setAttribute('accept', type === 'video' ? 'video/*' : 'application/pdf');
+      fileInput.value = ''; // Clear previous file selection
+
+      switch (type) {
+        case 'text':
+          contentDiv.innerHTML = `
+            <label>Content:</label><br>
+            <textarea name="section_text_${sectionId}" required>Enter text content here</textarea><br>
+          `;
+          filesDiv.style.display = 'none';
+          break;
+
+        case 'video':
+        case 'pdf':
+          contentDiv.innerHTML = '';
+          filesDiv.style.display = 'block';
+          filesDiv.querySelector('small').textContent = `Select multiple ${type} files for this section`;
+          break;
+
+        case 'quiz':
+          contentDiv.innerHTML = `
+            <label>Quiz Data (JSON):</label><br>
+            <textarea name="section_quiz_${sectionId}" required>{"questions": []}</textarea><br>
+          `;
+          filesDiv.style.display = 'none';
+          break;
+      }
+    }
+
+    // Initialize with one section
+    addSection();
+
+    // Form submission
+    const form = document.getElementById('moduleForm');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMessage.textContent = '';
+
+      const formData = new FormData();
+      const sections = [];
+
+      // Module fields
+      formData.append('title', form.title.value);
+      formData.append('content', form.content.value);
+      formData.append('order', form.order.value);
+      formData.append('isPublished', form.isPublished.checked ? 'true' : 'false');
+
+      // Process sections
+      const sectionElements = document.querySelectorAll('.section');
+
+      sectionElements.forEach((sectionEl, index) => {
+        const type = sectionEl.querySelector(`[name="section_type_${index}"]`).value;
+        const section = {
+          title: sectionEl.querySelector(`[name="section_title_${index}"]`).value,
+          order: sectionEl.querySelector(`[name="section_order_${index}"]`).value,
+          type: type
+        };
+
+        switch (type) {
+          case 'text':
+            section.content = sectionEl.querySelector(`[name="section_text_${index}"]`).value;
+            break;
+
+          case 'video':
+          case 'pdf':
+            const files = sectionEl.querySelector(`[name="section_files_${index}"]`).files;
+            if (files.length === 0) {
+              errorMessage.textContent = `Please select at least one file for ${type} section ${index + 1}`;
+              return;
+            }
+
+            // Add files with consistent field name 'files'
+            // In your form submission handler
+            for (let i = 0; i < files.length; i++) {
+              formData.append('files', files[i]); // Must match the field name in multer
+            }
+            break;
+
+          case 'quiz':
+            try {
+              section.quiz = JSON.parse(sectionEl.querySelector(`[name="section_quiz_${index}"]`).value);
+            } catch (e) {
+              errorMessage.textContent = `Invalid JSON format for quiz section ${index + 1}`;
+              return;
+            }
+            break;
+        }
+
+        sections.push(section);
+      });
+
+      if (errorMessage.textContent) return;
+
+      formData.append('sections', JSON.stringify(sections));
+
+      try {
+        const courseId = '68095c23d48be875cb427e95';
+        const response = await fetch(`http://localhost:5000/api/course/${courseId}/modules`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDY0ZGFmNjljNWNiNTIxNWU3MWRlMCIsInJvbGUiOiJ0dXRvciIsImlhdCI6MTc0NTQxODc4NywiZXhwIjoxNzQ2MDIzNTg3fQ.OT0xKrfyZQQY8noVeVhpWkJJp7Y9hxTkdzs5Ik-VK5E'
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Upload failed');
+        }
+
+        const result = await response.json();
+        alert('Module created successfully!\n' + JSON.stringify(result, null, 2));
+        form.reset();
+        // Reset sections
+        document.getElementById('sectionsContainer').innerHTML = '';
+        sectionCount = 0;
+        addSection();
+      } catch (error) {
+        console.error('Error:', error);
+        errorMessage.textContent = error.message;
+      }
+    });
+  </script>
+</body>
+
+</html>

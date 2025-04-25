@@ -11,6 +11,15 @@ class EnrollmentController {
         }
     }
 
+    async getAllEnrollments(req, res) {
+        try {
+            const enrollments = await EnrollmentService.getAllEnrollments();
+            res.status(200).json(enrollments);
+        } catch (error) {
+            res.status(400).json({ message: error.message });
+        }
+    }
+
     async getEnrollments(req, res) {
         const { studentId } = req.params;
         try {

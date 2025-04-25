@@ -1,3 +1,5 @@
+//course.js
+
 import mongoose from "mongoose";
 import ModuleSchema from "./Module.js";
 import QuizSchema from "./Quiz.js";
@@ -10,7 +12,6 @@ const CourseSchema = new mongoose.Schema({
   deadline: { type: Date, required: true }, // New field for deadline
   tutor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   modules: [ModuleSchema],
-  quizzes: [QuizSchema],
   sessionTypes: [{ // Array of session types with pricing and schedules
     type: String,
     enum: ['online', 'group', 'oneOnOne'],

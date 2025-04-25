@@ -42,6 +42,12 @@ class EnrollmentService {
         return await EnrollmentRepository.update(enrollmentId, { enrollmentStatus: enrollment.enrollmentStatus });
     }
 
+    async getAllEnrollments() { 
+        return await EnrollmentRepository.findAll();
+    }
+
+    
+
     // Add progress (e.g., module completion, quiz scores)
     async addProgress(enrollmentId, moduleId, score) {
         const enrollment = await EnrollmentRepository.findById(enrollmentId);
