@@ -13,7 +13,7 @@ interface Props {
 export function MyCourses({ enrollments }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {enrollments.map((e) => (
+     {enrollments.map((e) => ( 
         <Card key={e._id}>
           <CardHeader className="p-0">
             <div className="aspect-video w-full overflow-hidden rounded-t-lg">

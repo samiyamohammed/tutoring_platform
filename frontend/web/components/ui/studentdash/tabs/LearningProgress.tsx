@@ -1,104 +1,122 @@
 'use client';
 
-import { format, addDays, isToday, isTomorrow, parse } from 'date-fns';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
 
-// Helper to get next occurrence of a day
-const getNextDayDate = (dayName: string) => {
-  const daysOfWeek = [
-    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
-  ];
-  const today = new Date();
-  const todayIndex = today.getDay();
-  const targetIndex = daysOfWeek.indexOf(dayName);
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
-  if (targetIndex === -1) return null; // Invalid day
+interface Props {
+  enrollments: any[];
+}
 
-  let diff = targetIndex - todayIndex;
-  if (diff < 0) diff += 7; // Next week
+export function LearningProgress({ enrollments }: Props) {
+  // Prepare course progress data
+  const progressData = enrollments.map((e) => ({
+    course: e.course.title,
+    completion: e.progress?.completionPercentage || 0,
+  }));
 
-  return addDays(today, diff);
-};
+  // Prepare assessment scores data
+  const assessmentScores = enrollments.flatMap((e) =>
+    (e.progress?.assessments || []).map((a: any) => ({
+      course: e.course.title,
+      score: a.bestScore || 0,
+    }))
+  );
 
-<TabsContent value="schedule" className="space-y-4">
-  <Card>
-    <CardHeader>
-      <CardTitle>Upcoming Sessions</CardTitle>
-      <CardDescription>Sessions scheduled within the next 7 days</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-4">
-        {enrollments.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            No upcoming sessions found.
-          </div>
-        ) : (
-          enrollments.flatMap((enrollment) => {
-            const { course } = enrollment;
-            const sessions: any[] = [];
-
-            const pushSessions = (scheduleList: any[], type: string) => {
-              if (scheduleList?.length > 0) {
-                sessions.push(...scheduleList.map((s) => ({
-                  ...s,
-                  sessionType: type,
-                  tutor: course.tutor.name,
-                  courseTitle: course.title
-                })));
-              }
-            };
-
-            pushSessions(course.pricing?.online?.schedule, 'Online');
-            pushSessions(course.pricing?.group?.schedule, 'Group');
-            pushSessions(course.pricing?.oneOnOne?.schedule, 'One-on-One');
-
-            return sessions.map((session) => {
-              const nextDate = getNextDayDate(session.day);
-              if (!nextDate) return null;
-
-              // Build datetime for sorting
-              const startTimeParts = session.startTime.split(':');
-              const startDateTime = new Date(nextDate);
-              startDateTime.setHours(parseInt(startTimeParts[0]), parseInt(startTimeParts[1]));
-
-              return {
-                ...session,
-                nextDate,
-                startDateTime,
-              };
-            }).filter((session) => {
-              if (!session) return false;
-              const today = new Date();
-              const sevenDaysLater = addDays(today, 7);
-              return session.startDateTime >= today && session.startDateTime <= sevenDaysLater;
-            });
-          }).flat().sort((a, b) => a.startDateTime - b.startDateTime) // Sort sessions ascending
-            .map((session, idx) => (
-              <div key={idx} className="flex items-center">
-                <div className="flex items-center justify-center rounded-md border p-2 mr-4">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium leading-none">{session.courseTitle} - {session.sessionType} Session</p>
-                  <p className="text-sm text-muted-foreground">
-                    {isToday(session.nextDate) ? "Today" :
-                     isTomorrow(session.nextDate) ? "Tomorrow" :
-                     format(session.nextDate, 'EEEE, MMM d')}
-                    , {session.startTime} - {session.endTime} • {session.tutor}
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm">
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            ))
-        )}
+  return (
+    <div className="space-y-4">
+      {/* Learning Progress Line Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Learning Progress</CardTitle>
+          <CardDescription>Track your completion percentage across courses</CardDescription>
+        </CardHeader>
+        <CardContent>
+        <CardContent>
+  {progressData.length === 0 ? (
+    <div className="text-center text-muted-foreground py-8">
+      No enrolled courses yet.
+    </div>
+  ) : (
+    <div className="w-full overflow-x-auto">
+      <div className="min-w-[600px]"> {/* Minimum width for charts to scroll */}
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={progressData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="course" />
+            <YAxis domain={[0, 100]} />
+            <Tooltip />
+            <Line type="monotone" dataKey="completion" stroke="#3b82f6" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
-    </CardContent>
-    <CardFooter>
-      <Button variant="outline" className="w-full" asChild>
-        <Link href="/student/schedule">View Full Schedule</Link>
-      </Button>
-    </CardFooter>
-  </Card>
-</TabsContent>
+    </div>
+  )}
+</CardContent>
+
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Assessment Scores Bar Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Assessment Scores</CardTitle>
+            <CardDescription>Your performance in quizzes and exams</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {assessmentScores.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                No assessments attempted yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={assessmentScores}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="course" />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Bar dataKey="score" fill="#10b981" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Static Learning Goals */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Learning Goals</CardTitle>
+            <CardDescription>Your personal goals and progress</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { goal: "Complete 3 courses", progress: 30 },
+              { goal: "Study 20 hours this month", progress: 45 },
+              { goal: "Earn 2 certificates", progress: 50 },
+            ].map((goal, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span>{goal.goal}</span>
+                  <span>{goal.progress}%</span>
+                </div>
+                <Progress value={goal.progress} className="h-2" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

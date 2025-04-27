@@ -20,11 +20,19 @@ import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Progress } from "@/components/ui/progress"
 
+import  DashboardStats  from "@/components/ui/studentdash/tabs/DashboardStats"
 import { MyCourses } from "@/components/ui/studentdash/tabs/MyCourses"
 import { Schedule } from "@/components/ui/studentdash/tabs/Schedule"
 import {Recommendations} from "@/components/ui/studentdash/tabs/Recommendations"
+import {LearningProgress} from "@/components/ui/studentdash/tabs/LearningProgress"
 
 import { useState,useEffect } from "react"
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
 interface Enrollment {
   _id: string;
   student: string;
@@ -101,6 +109,7 @@ export default function StudentDashboardPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
 
 
 useEffect(() => {
@@ -114,6 +123,8 @@ useEffect(() => {
         throw new Error('No token or student ID found');
       }
 
+      setUser(typeof user === 'string' ? JSON.parse(user) : user);
+
       // fetch enrollments
       const enrollResponse = await fetch(`http://localhost:5000/api/enrollment/${studentId}`, {
         headers: {
@@ -125,11 +136,13 @@ useEffect(() => {
         throw new Error('Failed to fetch enrollments');
       }
 
+
+
       const enrollmentData = await enrollResponse.json();
       console.log("enrollment data", enrollmentData);
       setEnrollments(enrollmentData);
 
-      // fetch courses
+      // fetch all courses
       const courseResponse = await fetch('http://localhost:5000/api/course/',{
         headers: {
           Authorization: `Bearer ${token}`
@@ -164,7 +177,7 @@ useEffect(() => {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, Jane Doe</p>
+              <p className="text-sm text-muted-foreground">Welcome back, {user?.name || 'Student'}</p>
             </div>
             <Button asChild>
               <Link href="/student/explore">
@@ -174,47 +187,8 @@ useEffect(() => {
             </Button>
           </div>
           <div className="flex-1 space-y-4 p-8 pt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Enrolled Courses</CardTitle>
-                  <BookOpen className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">4</div>
-                  <p className="text-xs text-muted-foreground">2 in progress, 2 completed</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-muted-foreground">Next: Today at 4:00 PM</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Certificates Earned</CardTitle>
-                  <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-muted-foreground">Latest: Web Development Fundamentals</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Hours Studied</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">42</div>
-                  <p className="text-xs text-muted-foreground">This month: 18 hours</p>
-                </CardContent>
-              </Card>
+            <div className="">
+              <DashboardStats enrollments={enrollments} loading={loading} />
             </div>
             <Tabs defaultValue="courses" className="space-y-4">
               <TabsList>
@@ -232,7 +206,8 @@ useEffect(() => {
                {/* Learning progress tab */}
 
               <TabsContent value="progress" className="space-y-4"> 
-                <Card>
+                <LearningProgress enrollments={enrollments} />
+                {/* <Card>
                   <CardHeader>
                     <CardTitle>Learning Progress</CardTitle>
                     <CardDescription>Track your progress across all courses</CardDescription>
@@ -278,7 +253,7 @@ useEffect(() => {
                       </div>
                     </CardContent>
                   </Card>
-                </div>
+                </div> */}
               </TabsContent>
 
                 {/* schedule */}

@@ -33,7 +33,7 @@ export function Recommendations({ enrollments, courses }: Props) {
               </div>
               <div className="flex-1 space-y-1">
                 <p className="text-sm font-medium leading-none">{course.title}</p>
-                <p className="text-xs text-muted-foreground">{course.tutor} • {course.rating} ★ • {course.students} students </p>
+                <p className="text-xs text-muted-foreground">{course.tutor.name} • {course.rating} ★ • {course.students} students </p>
                 <p className="text-xs text-muted-foreground">{course.category} • {course.level}</p>
                 <p className="text-sm font-medium">${course.pricing?.online?.price || 0}</p>
               </div>
