@@ -77,8 +77,8 @@ export function StudentSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/student/my-courses")}>
-                  <Link href="/student/my-courses">
+                <SidebarMenuButton asChild isActive={isActive("/student/my-courses/courses-page")}>
+                  <Link href="/student/my-courses/courses-page">
                     <BookOpen className="h-4 w-4" />
                     <span>My Courses</span>
                   </Link>
