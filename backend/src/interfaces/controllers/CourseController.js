@@ -103,14 +103,28 @@ class CourseController {
           case 'quiz':
             fullSection = {
               ...baseSection,
-              quiz: section.quiz
+              quiz: {
+                title: section.quiz.title,
+                order: section.quiz.order || 1,
+                duration: section.quiz.duration || 30,
+                isPublished: section.quiz.isPublished || false,
+                questions: section.quiz.questions.map(q => ({
+                  questionText: q.questionText,
+                  questionType: q.questionType,
+                  options: q.options,
+                  correctAnswers: q.correctAnswers,
+                  points: q.points || 1,
+                  explanation: q.explanation || ""
+                }))
+              }
             };
             break;
+            
+          default:
+            throw new Error(`Unknown section type: ${section.type}`);
         }
         
-        if (fullSection) {
-          processedSections.push(fullSection);
-        }
+        processedSections.push(fullSection);
       }
   
       const newModule = {

@@ -3,15 +3,26 @@ import User from "./User.js"; // Adjust the path as necessary
 
 const TutorSchema = new mongoose.Schema({
   qualification: { type: String },  // Degree, Certification, etc.
-  experience: { type: Number  }, // Years of teaching experience
+  experience: { type: Number }, // Years of teaching experience
   subjects: [{ type: String }], // List of subjects they teach
-  resume: { type: String }, // Resume file URL
   verification_status: {
     type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending"
+    enum: ["initial", "requested", "approved", "rejected"],
+    default: "initial"
   },
-  verification_documents: [{ type: String }] // File URLs
+  verification_documents: [{
+    name: { type: String, required: true },
+    url: { type: String, required: true }
+  }],
+
+  ratings: [{
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Reference to the student who rated
+    rating: { type: Number, min: 1, max: 5 },  // Rating score
+    comment: { type: String },  // Optional comment
+    date: { type: Date, default: Date.now }  // Rating date
+  }],
+
+
 });
 
 // Create the Tutor model using User as a base

@@ -5,7 +5,7 @@ const SectionBaseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   order: { type: Number, required: true, min: 1 },
   type: { type: String, required: true, enum: ['text', 'video', 'pdf', 'quiz'] }
-}, { _id: false, discriminatorKey: 'type' });
+}, {discriminatorKey: 'type'});
 
 // Section type schemas
 const TextSectionSchema = new mongoose.Schema({
