@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 
 const QuestionSchema = new mongoose.Schema({
-  questionText: { type: String, required: true },
-  questionType: { type: String, required: true },
-  options: [{ type: String, required: true }],
-  correctAnswer: { type: String, required: true },
+  questionText: String,
+  questionType: String,
+  options: [String],
+  correctAnswers: [String], // Array for actual use
+  points: Number,
+  explanation: String
 }, { timestamps: true });
 
 // Exporting the Question schema directly, not as a model

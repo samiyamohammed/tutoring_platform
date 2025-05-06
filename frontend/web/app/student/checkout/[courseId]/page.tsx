@@ -84,6 +84,10 @@ export default function CheckoutPage() {
   const [paymentOption, setPaymentOption] = useState("full")
   const [sessionType, setSessionType] = useState("online")
   const [paymentError, setPaymentError] = useState("")
+  const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("user") || '{}') : {}
+  const userEmail = user.email || "default@example.com";
+  const fullName = user.name || "Default User";
+  const [firstName, lastName] = fullName.split(' ');
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -249,13 +253,13 @@ export default function CheckoutPage() {
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <h3 className="font-medium">Session Type</h3>
-                      <Tabs 
-                        defaultValue={course.sessionTypes[0]} 
-                        value={sessionType} 
+                      <Tabs
+                        defaultValue={course.sessionTypes[0]}
+                        value={sessionType}
                         onValueChange={setSessionType}
                       >
-                        <TabsList className="grid w-full" style={{ 
-                          gridTemplateColumns: `repeat(${course.sessionTypes.length}, minmax(0, 1fr))` 
+                        <TabsList className="grid w-full" style={{
+                          gridTemplateColumns: `repeat(${course.sessionTypes.length}, minmax(0, 1fr))`
                         }}>
                           {isSessionTypeAvailable('online') && (
                             <TabsTrigger value="online">
@@ -347,18 +351,22 @@ export default function CheckoutPage() {
                     )}
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-4">
-                    <DirectChapaButton
-                      amount={totalPrice}
-                      email="student@example.com" // Replace with actual user email
-                      firstName="Student" // Replace with actual user first name
-                      lastName="User" // Replace with actual user last name
-                      title={`${course.title} - ${sessionType} ${paymentOption === "installment" ? "(Installment 1/3)" : ""}`}
-                      currency="ETB"
-                      onError={(error) => setPaymentError(error)}
-                    />
-                    <div className="text-center text-sm text-muted-foreground">
-                      By proceeding, you agree to our Terms of Service and Privacy Policy.
+
+                    <div onClick={() => localStorage.setItem("lastPaidCourseId", course._id)}>
+                      <DirectChapaButton
+
+                        amount={totalPrice}
+                        email={userEmail}
+                        firstName={firstName}
+                        lastName={lastName}
+                        title={`${course.title} - ${sessionType} ${paymentOption === "installment" ? "(Installment 1/3)" : ""}`}
+                        currency="ETB"
+                        onError={(error) => setPaymentError(error)}
+                      />
                     </div>
+                      <div className="text-center text-sm text-muted-foreground">
+                        By proceeding, you agree to our Terms of Service and Privacy Policy.
+                      </div>
                   </CardFooter>
                 </Card>
               </div>

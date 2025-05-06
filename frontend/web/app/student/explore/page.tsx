@@ -505,7 +505,7 @@ function CourseCard({ course }: { course: Course }) {
       </CardContent>
       <CardFooter className="p-4 pt-0 mt-auto">
         <Button className="w-full" asChild>
-          <Link href={`/student/checkout/${course._id}`}>Enroll</Link>
+          <Link href={`/student/explore/course-details/${course._id}`}>View Detail</Link>
         </Button>
       </CardFooter>
     </Card>

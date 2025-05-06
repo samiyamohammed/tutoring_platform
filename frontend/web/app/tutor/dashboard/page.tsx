@@ -39,6 +39,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts'
+import { SidebarProvider } from "@/components/ui/sidebar"
 
 // Types based on your schema
 type Course = {
@@ -310,6 +311,7 @@ export default function TutorDashboardPage() {
   }
 
   return (
+    <SidebarProvider>
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div>
@@ -782,5 +784,6 @@ export default function TutorDashboardPage() {
         </Tabs>
       </div>
     </div>
+    </SidebarProvider>
   )
 }

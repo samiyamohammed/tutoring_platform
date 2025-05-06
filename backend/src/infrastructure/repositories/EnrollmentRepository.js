@@ -17,6 +17,10 @@ class EnrollmentRepository {
         return await Enrollment.find({ student: studentId }).populate('course');
     }
 
+    async findByStudentAndCourseId(studentId, courseId) {
+        return await Enrollment.findOne({ student: studentId, course: courseId }).populate('course student');
+    }
+
     async update(id, updateData) {
         return await Enrollment.findByIdAndUpdate(id, updateData, { new: true });
     }
