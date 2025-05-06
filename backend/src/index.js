@@ -47,13 +47,11 @@ const server = http.createServer(app);
 initSocket(server);
 
 app.use("/api/auth", authRoutes);
-app.use('/api/enrollment', authenticate, enrollmentRoutes);
+app.use("/api/enrollment", authenticate, enrollmentRoutes);
 app.use("/api/users", authenticate, userRoutes);
 app.use("/api/chat", authenticate, chatRoutes);
 app.use("/api/course", authenticate, courseRoutes);
-// app.use("/api/module", authenticate, moduleRoutes);
-// app.use("/api/quiz", authenticate, quizRoutes);
-app.use('/api/session', sessionRoutes);
+app.use("/api/session", authenticate, sessionRoutes);
 
 app.get('/api/files/:id', async (req, res) => {
   try {
@@ -128,8 +126,5 @@ app.get('/api/videos/stream/:id', async (req, res) => {
 });
 
 
-
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`server running on port ${PORT}`));
-
-

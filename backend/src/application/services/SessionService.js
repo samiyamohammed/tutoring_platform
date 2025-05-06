@@ -1,5 +1,5 @@
 // src/application/services/SessionService.js
-import SessionRepository from '../../infrastructure/repositories/SessionRepository.js';
+import SessionRepository from "../../infrastructure/repositories/SessionRepository.js";
 
 class SessionService {
   async createSession(sessionData) {

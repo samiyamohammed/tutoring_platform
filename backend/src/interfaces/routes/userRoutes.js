@@ -6,8 +6,9 @@ import { upload, gfs } from '../../utils/multer-config.js';
 const router = express.Router();
 
 // Profile management routes (for all user types)
-router.get("/profile",  (req, res) => userController.getProfile(req, res));
-router.put("/profile",  (req, res) => userController.updateProfile(req, res));
+router.get("/profile", (req, res) => userController.getProfile(req, res));
+router.put("/profile", (req, res) => userController.updateProfile(req, res));
+router.get("/students", (req, res) => userController.getAllStudents(req, res));
 
 // User management routes (admin only)
 router.get("/:id", authorize(['admin']), (req, res) => userController.getUserById(req, res));

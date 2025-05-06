@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
@@ -108,9 +108,10 @@ const certificationSchema = new mongoose.Schema({
   expirationDate: Date
 });
 
-const EnrollmentSchema = new Schema({
-  student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+const EnrollmentSchema = new Schema(
+  {
+    student: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    course: { type: Schema.Types.ObjectId, ref: "Course", required: true },
 
   enrolledSessionType: {
     type: String,
@@ -118,18 +119,20 @@ const EnrollmentSchema = new Schema({
     required: true
   },
 
-  currentStatus: {
-    type: String,
-    enum: EnrollmentStatus,
-    default: 'enrolled'
-  },
+    currentStatus: {
+      type: String,
+      enum: EnrollmentStatus,
+      default: "enrolled",
+    },
 
-  statusHistory: [{
-    status: String,
-    changedAt: { type: Date, default: Date.now },
-    changedBy: { type: Schema.Types.ObjectId, ref: 'User' },
-    reason: String
-  }],
+    statusHistory: [
+      {
+        status: String,
+        changedAt: { type: Date, default: Date.now },
+        changedBy: { type: Schema.Types.ObjectId, ref: "User" },
+        reason: String,
+      },
+    ],
 
   progress: {
     modules: [moduleProgressSchema],
@@ -156,20 +159,21 @@ const EnrollmentSchema = new Schema({
     }
   },
 
-  enrollmentDate: { type: Date, default: Date.now },
-  startDate: Date,
-  expectedCompletionDate: Date,
-  actualCompletionDate: Date,
+    enrollmentDate: { type: Date, default: Date.now },
+    startDate: Date,
+    expectedCompletionDate: Date,
+    actualCompletionDate: Date,
 
-  metadata: {
-    deviceInfo: [String],
-    ipAddresses: [String],
-    referralSource: String
+    metadata: {
+      deviceInfo: [String],
+      ipAddresses: [String],
+      referralSource: String,
+    },
+
+    activityLog: [ActivityLogSchema],
   },
-
-  activityLog: [ActivityLogSchema]
-
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // Virtuals
 EnrollmentSchema.virtual('isCompleted').get(function () {
@@ -215,6 +219,6 @@ EnrollmentSchema.pre('save', function (next) {
   next();
 });
 
-const Enrollment = mongoose.model('Enrollment', EnrollmentSchema);
+const Enrollment = mongoose.model("Enrollment", EnrollmentSchema);
 
 export default Enrollment;
