@@ -61,8 +61,8 @@ class AuthService {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) throw new Error("Invalid email or password");
 
-    if (user.role === 'tutor' && user.verification_status === 'pending') {
-        throw new Error("Account is being verified");    }
+    // if (user.role === 'tutor' && user.verification_status === 'pending') {
+    //     throw new Error("Account is being verified");    }
    
     const token = await generateToken(user);
     return { token, user };

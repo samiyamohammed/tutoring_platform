@@ -1,16 +1,16 @@
 import CourseService from "../../application/services/CourseService.js";
 
 class CourseController {
-    async create(req, res) {
-        try {
-            req.body.tutor = req.user._id; // Assign tutor ID
-            console.log(req.user._id);
-            const course = await CourseService.createCourse(req.body);
-            res.status(201).json(course);
-        } catch (error) {
-            res.status(400).json({ error: error.message });
-        }
+  async create(req, res) {
+    try {
+      req.body.tutor = req.user._id; // Assign tutor ID
+      console.log(req.user._id);
+      const course = await CourseService.createCourse(req.body);
+      res.status(201).json(course);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
+  }
 
   async getCourses(req, res) {
     try {
@@ -33,21 +33,25 @@ class CourseController {
 
   async update(req, res) {
     try {
-        const course = await CourseService.updateCourse(req.params.id, req.user._id, req.body);
-        res.status(200).json(course);
+      const course = await CourseService.updateCourse(
+        req.params.id,
+        req.user._id,
+        req.body
+      );
+      res.status(200).json(course);
     } catch (error) {
-        res.status(403).json({ error: error.message });
+      res.status(403).json({ error: error.message });
     }
-}
+  }
 
-async delete(req, res) {
+  async delete(req, res) {
     try {
-        await CourseService.deleteCourse(req.params.id, req.user._id);
-        res.status(200).json({ message: 'Course deleted successfully' });
+      await CourseService.deleteCourse(req.params.id, req.user._id);
+      res.status(200).json({ message: "Course deleted successfully" });
     } catch (error) {
-        res.status(403).json({ error: error.message });
+      res.status(403).json({ error: error.message });
     }
-}
+  }
 }
 
 export default new CourseController();
