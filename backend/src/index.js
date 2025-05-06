@@ -31,7 +31,7 @@ app.use('/api/enrollment', authenticate, enrollmentRoutes);
 app.use("/api/users", authenticate, userRoutes);
 app.use("/api/chat", authenticate, chatRoutes);
 app.use("/api/course", authenticate, courseRoutes);
-// app.use("/api/module", authenticate, moduleRoutes);
+app.use("/api/module", authenticate, moduleRoutes);
 // app.use("/api/quiz", authenticate, quizRoutes);
 app.use('/api/session', sessionRoutes);
 

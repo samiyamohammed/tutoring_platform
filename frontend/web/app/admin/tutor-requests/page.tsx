@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -35,94 +35,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import router from "next/router"
 
-const tutorRequests = [
-  {
-    id: "TR-001",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    submittedAt: "2023-04-15T10:35:00Z",
-    status: "pending",
-    documents: [
-      { name: "ID_Card.pdf", size: "1.2 MB", type: "application/pdf" },
-      { name: "Teaching_Certificate.pdf", size: "2.5 MB", type: "application/pdf" },
-      { name: "Masters_Degree.pdf", size: "3.1 MB", type: "application/pdf" },
-    ],
-    qualifications: "Ph.D. in Computer Science from MIT. 5 years of teaching experience at university level.",
-    experience: "Taught programming courses at MIT for 3 years. Worked as a senior developer at Google for 2 years.",
-    specializations: ["Web Development", "Machine Learning", "Data Structures"],
-    phone: "+1 (555) 123-4567",
-    address: "123 Tech Lane, Cambridge, MA 02142",
-  },
-  {
-    id: "TR-002",
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    submittedAt: "2023-04-14T14:22:00Z",
-    status: "pending",
-    documents: [
-      { name: "ID_Card.pdf", size: "0.9 MB", type: "application/pdf" },
-      { name: "Teaching_License.pdf", size: "1.8 MB", type: "application/pdf" },
-      { name: "Bachelor_Degree.pdf", size: "2.3 MB", type: "application/pdf" },
-    ],
-    qualifications: "Bachelor's in Education from Stanford. Certified teacher with specialization in mathematics.",
-    experience: "5 years teaching mathematics at high school level. 2 years of online tutoring experience.",
-    specializations: ["Mathematics", "Algebra", "Calculus"],
-    phone: "+1 (555) 987-6543",
-    address: "456 Education Ave, Palo Alto, CA 94301",
-  },
-  {
-    id: "TR-003",
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    submittedAt: "2023-04-13T09:15:00Z",
-    status: "approved",
-    documents: [
-      { name: "ID_Card.pdf", size: "1.1 MB", type: "application/pdf" },
-      { name: "Teaching_Certificate.pdf", size: "2.2 MB", type: "application/pdf" },
-      { name: "PhD_Certificate.pdf", size: "3.5 MB", type: "application/pdf" },
-    ],
-    qualifications: "Ph.D. in Physics from Caltech. Published researcher in quantum mechanics.",
-    experience: "10 years teaching physics at university level. Created online courses with over 50,000 students.",
-    specializations: ["Physics", "Quantum Mechanics", "Astrophysics"],
-    phone: "+1 (555) 456-7890",
-    address: "789 Science Blvd, Pasadena, CA 91125",
-  },
-  {
-    id: "TR-004",
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    submittedAt: "2023-04-12T16:45:00Z",
-    status: "rejected",
-    documents: [
-      { name: "ID_Card.pdf", size: "1.0 MB", type: "application/pdf" },
-      { name: "Resume.pdf", size: "1.5 MB", type: "application/pdf" },
-    ],
-    qualifications: "Self-taught web developer with 3 years of experience.",
-    experience: "Freelance web developer. Created personal blog with tutorials.",
-    specializations: ["Web Development", "JavaScript"],
-    phone: "+1 (555) 234-5678",
-    address: "321 Coding St, San Francisco, CA 94107",
-    rejectionReason: "Insufficient teaching experience and qualifications.",
-  },
-  {
-    id: "TR-005",
-    name: "David Wilson",
-    email: "david.wilson@example.com",
-    submittedAt: "2023-04-11T11:30:00Z",
-    status: "pending",
-    documents: [
-      { name: "ID_Card.pdf", size: "1.2 MB", type: "application/pdf" },
-      { name: "Teaching_Certificate.pdf", size: "2.1 MB", type: "application/pdf" },
-      { name: "Masters_Degree.pdf", size: "2.8 MB", type: "application/pdf" },
-    ],
-    qualifications: "Master's in Music from Juilliard. Professional pianist with international performances.",
-    experience: "15 years teaching piano to students of all ages. Created online piano course with 10,000+ students.",
-    specializations: ["Music", "Piano", "Music Theory"],
-    phone: "+1 (555) 876-5432",
-    address: "654 Harmony Lane, New York, NY 10023",
-  },
-]
+interface TutorRequest {
+  _id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+  verification_status: "pending" | "approved" | "rejected";
+  verification_documents: {
+    name?: string;
+    url: string;
+  }[];
+  subjects: string[];
+  phone?: string;
+  address?: string;
+  qualifications?: string;
+  experience?: string;
+  rejectionReason?: string;
+}
 
 const reviewSchema = z
   .object({
@@ -147,12 +79,18 @@ export default function TutorRequestsPage() {
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string[]>(["pending", "approved", "rejected"])
-  const [selectedRequest, setSelectedRequest] = useState<(typeof tutorRequests)[0] | null>(null)
+  const [selectedRequest, setSelectedRequest] = useState<TutorRequest | null>(
+      null
+    );
   const [viewingDocuments, setViewingDocuments] = useState(false)
   const [reviewingRequest, setReviewingRequest] = useState(false)
   const [viewingDetails, setViewingDetails] = useState(false)
-  const [selectedDocument, setSelectedDocument] = useState<(typeof tutorRequests)[0]["documents"][0] | null>(null)
+  const [selectedDocument, setSelectedDocument] = useState<
+    (typeof tutorRequests)[0]["verification_documents"][0] | null
+  >(null);
   const [previewingDocument, setPreviewingDocument] = useState(false)
+  const [tutorRequests, setTutorRequests] = useState<TutorRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const form = useForm<z.infer<typeof reviewSchema>>({
     resolver: zodResolver(reviewSchema),
@@ -167,12 +105,114 @@ export default function TutorRequestsPage() {
     const matchesSearch =
       request.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.id.toLowerCase().includes(searchQuery.toLowerCase())
+      request._id.toLowerCase().includes(searchQuery.toLowerCase())
 
-    const matchesStatus = statusFilter.includes(request.status)
+    const matchesStatus = statusFilter.includes(request.verification_status);
 
     return matchesSearch && matchesStatus
   })
+
+   useEffect(() => {
+     const fetchTutorRequests = async () => {
+       try {
+         const token = localStorage.getItem("token");
+         if (!token) {
+           router.push("/auth/signin");
+           return;
+         }
+          console.log("Fetching tutor requests...");
+
+         const response = await fetch("http://localhost:5000/api/users/tutors", {
+           headers: {
+             Authorization: `Bearer ${token}`,
+             "Content-Type": "application/json",
+           },
+         });
+
+          console.log("Response status:", response.status);
+
+         if (!response.ok) {
+           throw new Error("Failed to fetch tutor requests");
+         }
+
+         const data = await response.json();
+         console.log("Received data:", data);
+         setTutorRequests(data);
+       } catch (error) {
+        console.error("Error fetching tutor requests:", error);
+         toast({
+           variant: "destructive",
+           title: "Error",
+           description: error instanceof Error ? error.message : "An unknown error occurred",
+         });
+       } finally {
+         setIsLoading(false);
+       }
+     };
+
+     fetchTutorRequests();
+   }, [router, toast]);
+
+  //  const onSubmitReview = (values: z.infer<typeof reviewSchema>) => {
+  //    console.log(values);
+
+  //    toast({
+  //      title: `Request ${
+  //        values.status === "approved" ? "approved" : "rejected"
+  //      }`,
+  //      description: `Tutor request ${selectedRequest?._id} has been ${
+  //        values.status === "approved" ? "approved" : "rejected"
+  //      }.`,
+  //    });
+
+  //    setReviewingRequest(false);
+  //  };
+
+   const onSubmitReview = async (values: z.infer<typeof reviewSchema>) => {
+     try {
+       const token = localStorage.getItem("token");
+       const response = await fetch(
+         `http://localhost:5000/api/users/${selectedRequest?._id}`,
+         {
+           method: "PUT",
+           headers: {
+             "Content-Type": "application/json",
+             Authorization: `Bearer ${token}`,
+           },
+           body: JSON.stringify({
+             verification_status: values.status,
+             //  rejectionReason:
+             //    values.status === "rejected"
+             //      ? values.rejectionReason
+             //      : undefined,
+           }),
+         }
+       );
+
+       if (!response.ok) throw new Error("Failed to update status");
+
+       // Refresh data
+       const fetchData = async () => {
+         const res = await fetch("http://localhost:5000/api/users/tutors", {
+           headers: { Authorization: `Bearer ${token}` },
+         });
+         setTutorRequests(await res.json());
+       };
+       fetchData();
+
+       toast({
+         title: `Request ${values.status}`,
+         description: `Tutor request has been ${values.status}.`,
+       });
+       setReviewingRequest(false);
+     } catch (error) {
+       toast({
+         variant: "destructive",
+         title: "Error",
+         description: error instanceof Error ? error.message : "Update failed",
+       });
+     }
+   };
 
   const handleViewRequest = (request: (typeof tutorRequests)[0]) => {
     setSelectedRequest(request)
@@ -194,21 +234,16 @@ export default function TutorRequestsPage() {
     })
   }
 
-  const handlePreviewDocument = (document: (typeof tutorRequests)[0]["documents"][0]) => {
-    setSelectedDocument(document)
-    setPreviewingDocument(true)
-  }
-
-  const onSubmitReview = (values: z.infer<typeof reviewSchema>) => {
-    console.log(values)
-
+const handlePreviewDocument = (doc: { name?: string | undefined; url: any }) => {
+  if (doc.url) {
+    window.open(doc.url, "_blank");
+  } else {
     toast({
-      title: `Request ${values.status === "approved" ? "approved" : "rejected"}`,
-      description: `Tutor request ${selectedRequest?.id} has been ${values.status === "approved" ? "approved" : "rejected"}.`,
-    })
-
-    setReviewingRequest(false)
+      title: "Document unavailable",
+      description: "This document cannot be previewed at this time.",
+    });
   }
+};
 
   return (
     <SidebarProvider>
@@ -217,8 +252,12 @@ export default function TutorRequestsPage() {
         <main className="flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
-              <h1 className="text-lg font-semibold">Tutor Verification Requests</h1>
-              <p className="text-sm text-muted-foreground">Review and manage tutor verification requests</p>
+              <h1 className="text-lg font-semibold">
+                Tutor Verification Requests
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Review and manage tutor verification requests
+              </p>
             </div>
           </div>
           <div className="flex-1 space-y-4 p-8 pt-6">
@@ -244,9 +283,11 @@ export default function TutorRequestsPage() {
                       checked={statusFilter.includes("pending")}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setStatusFilter([...statusFilter, "pending"])
+                          setStatusFilter([...statusFilter, "pending"]);
                         } else {
-                          setStatusFilter(statusFilter.filter((s) => s !== "pending"))
+                          setStatusFilter(
+                            statusFilter.filter((s) => s !== "pending")
+                          );
                         }
                       }}
                     >
@@ -256,9 +297,11 @@ export default function TutorRequestsPage() {
                       checked={statusFilter.includes("approved")}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setStatusFilter([...statusFilter, "approved"])
+                          setStatusFilter([...statusFilter, "approved"]);
                         } else {
-                          setStatusFilter(statusFilter.filter((s) => s !== "approved"))
+                          setStatusFilter(
+                            statusFilter.filter((s) => s !== "approved")
+                          );
                         }
                       }}
                     >
@@ -268,9 +311,11 @@ export default function TutorRequestsPage() {
                       checked={statusFilter.includes("rejected")}
                       onCheckedChange={(checked) => {
                         if (checked) {
-                          setStatusFilter([...statusFilter, "rejected"])
+                          setStatusFilter([...statusFilter, "rejected"]);
                         } else {
-                          setStatusFilter(statusFilter.filter((s) => s !== "rejected"))
+                          setStatusFilter(
+                            statusFilter.filter((s) => s !== "rejected")
+                          );
                         }
                       }}
                     >
@@ -284,13 +329,31 @@ export default function TutorRequestsPage() {
               <TabsList>
                 <TabsTrigger value="all">All Requests</TabsTrigger>
                 <TabsTrigger value="pending">
-                  Pending ({tutorRequests.filter((r) => r.status === "pending").length})
+                  Pending (
+                  {
+                    tutorRequests.filter(
+                      (r) => r.verification_status === "pending"
+                    ).length
+                  }
+                  )
                 </TabsTrigger>
                 <TabsTrigger value="approved">
-                  Approved ({tutorRequests.filter((r) => r.status === "approved").length})
+                  Approved (
+                  {
+                    tutorRequests.filter(
+                      (r) => r.verification_status === "approved"
+                    ).length
+                  }
+                  )
                 </TabsTrigger>
                 <TabsTrigger value="rejected">
-                  Rejected ({tutorRequests.filter((r) => r.status === "rejected").length})
+                  Rejected (
+                  {
+                    tutorRequests.filter(
+                      (r) => r.verification_status === "rejected"
+                    ).length
+                  }
+                  )
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="all" className="space-y-4">
@@ -310,53 +373,91 @@ export default function TutorRequestsPage() {
                       <TableBody>
                         {filteredRequests.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={6}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No requests found
                             </TableCell>
                           </TableRow>
                         ) : (
                           filteredRequests.map((request) => (
-                            <TableRow key={request.id}>
-                              <TableCell className="font-medium">{request.id}</TableCell>
+                            <TableRow key={request._id}>
+                              <TableCell className="font-medium">
+                                {request._id}
+                              </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
                                   <Avatar className="h-8 w-8">
-                                    <AvatarImage src={`https://avatar.vercel.sh/${request.email}`} />
-                                    <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage
+                                      src={`https://avatar.vercel.sh/${request.email}`}
+                                    />
+                                    <AvatarFallback>
+                                      {request.name.charAt(0)}
+                                    </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="font-medium">{request.name}</div>
-                                    <div className="text-xs text-muted-foreground">{request.email}</div>
+                                    <div className="font-medium">
+                                      {request.name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {request.email}
+                                    </div>
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell>{new Date(request.submittedAt).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                {new Date(
+                                  request.updatedAt
+                                ).toLocaleDateString()}
+                              </TableCell>
                               <TableCell>
                                 <Badge
                                   variant={
-                                    request.status === "approved"
+                                    request.verification_status === "approved"
                                       ? "default"
-                                      : request.status === "rejected"
-                                        ? "destructive"
-                                        : "outline"
+                                      : request.verification_status ===
+                                        "rejected"
+                                      ? "destructive"
+                                      : "outline"
                                   }
                                 >
-                                  {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                  {request.verification_status
+                                    .charAt(0)
+                                    .toUpperCase() +
+                                    request.verification_status.slice(1)}
                                 </Badge>
                               </TableCell>
-                              <TableCell>{request.documents.length} files</TableCell>
+                              <TableCell>
+                                {request.verification_documents.length} files
+                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => handleViewRequest(request)}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewRequest(request)}
+                                  >
                                     <Eye className="h-4 w-4" />
                                     <span className="sr-only">View</span>
                                   </Button>
-                                  <Button variant="ghost" size="icon" onClick={() => handleViewDocuments(request)}>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewDocuments(request)}
+                                  >
                                     <FileText className="h-4 w-4" />
                                     <span className="sr-only">Documents</span>
                                   </Button>
-                                  {request.status === "pending" && (
-                                    <Button variant="ghost" size="icon" onClick={() => handleReviewRequest(request)}>
+                                  {request.verification_status ===
+                                    "pending" && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        handleReviewRequest(request)
+                                      }
+                                    >
                                       <Check className="h-4 w-4" />
                                       <span className="sr-only">Review</span>
                                     </Button>
@@ -385,43 +486,80 @@ export default function TutorRequestsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredRequests.filter((r) => r.status === "pending").length === 0 ? (
+                        {filteredRequests.filter(
+                          (r) => r.verification_status === "pending"
+                        ).length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={5}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No pending requests found
                             </TableCell>
                           </TableRow>
                         ) : (
                           filteredRequests
-                            .filter((r) => r.status === "pending")
+                            .filter((r) => r.verification_status === "pending")
                             .map((request) => (
-                              <TableRow key={request.id}>
-                                <TableCell className="font-medium">{request.id}</TableCell>
+                              <TableRow key={request._id}>
+                                <TableCell className="font-medium">
+                                  {request._id}
+                                </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <Avatar className="h-8 w-8">
-                                      <AvatarImage src={`https://avatar.vercel.sh/${request.email}`} />
-                                      <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
+                                      <AvatarImage
+                                        src={`https://avatar.vercel.sh/${request.email}`}
+                                      />
+                                      <AvatarFallback>
+                                        {request.name.charAt(0)}
+                                      </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <div className="font-medium">{request.name}</div>
-                                      <div className="text-xs text-muted-foreground">{request.email}</div>
+                                      <div className="font-medium">
+                                        {request.name}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {request.email}
+                                      </div>
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell>{new Date(request.submittedAt).toLocaleDateString()}</TableCell>
-                                <TableCell>{request.documents.length} files</TableCell>
+                                <TableCell>
+                                  {new Date(
+                                    request.updatedAt
+                                  ).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                  {request.verification_documents.length} files
+                                </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewRequest(request)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleViewRequest(request)}
+                                    >
                                       <Eye className="h-4 w-4" />
                                       <span className="sr-only">View</span>
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewDocuments(request)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        handleViewDocuments(request)
+                                      }
+                                    >
                                       <FileText className="h-4 w-4" />
                                       <span className="sr-only">Documents</span>
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleReviewRequest(request)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        handleReviewRequest(request)
+                                      }
+                                    >
                                       <Check className="h-4 w-4" />
                                       <span className="sr-only">Review</span>
                                     </Button>
@@ -449,43 +587,73 @@ export default function TutorRequestsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredRequests.filter((r) => r.status === "approved").length === 0 ? (
+                        {filteredRequests.filter(
+                          (r) => r.verification_status === "approved"
+                        ).length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            <TableCell
+                              colSpan={5}
+                              className="text-center py-8 text-muted-foreground"
+                            >
                               No approved requests found
                             </TableCell>
                           </TableRow>
                         ) : (
                           filteredRequests
-                            .filter((r) => r.status === "approved")
+                            .filter((r) => r.verification_status === "approved")
                             .map((request) => (
-                              <TableRow key={request.id}>
-                                <TableCell className="font-medium">{request.id}</TableCell>
+                              <TableRow key={request._id}>
+                                <TableCell className="font-medium">
+                                  {request._id}
+                                </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <Avatar className="h-8 w-8">
-                                      <AvatarImage src={`https://avatar.vercel.sh/${request.email}`} />
-                                      <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
+                                      <AvatarImage
+                                        src={`https://avatar.vercel.sh/${request.email}`}
+                                      />
+                                      <AvatarFallback>
+                                        {request.name.charAt(0)}
+                                      </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <div className="font-medium">{request.name}</div>
-                                      <div className="text-xs text-muted-foreground">{request.email}</div>
+                                      <div className="font-medium">
+                                        {request.name}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {request.email}
+                                      </div>
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell>{new Date(request.submittedAt).toLocaleDateString()}</TableCell>
                                 <TableCell>
                                   {new Date(
-                                    new Date(request.submittedAt).getTime() + 2 * 24 * 60 * 60 * 1000,
+                                    request.updatedAt
+                                  ).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                  {new Date(
+                                    new Date(request.updatedAt).getTime() +
+                                      2 * 24 * 60 * 60 * 1000
                                   ).toLocaleDateString()}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewRequest(request)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleViewRequest(request)}
+                                    >
                                       <Eye className="h-4 w-4" />
                                       <span className="sr-only">View</span>
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewDocuments(request)}>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        handleViewDocuments(request)
+                                      }
+                                    >
                                       <FileText className="h-4 w-4" />
                                       <span className="sr-only">Documents</span>
                                     </Button>
@@ -505,61 +673,94 @@ export default function TutorRequestsPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>ID</TableHead>
                           <TableHead>Tutor</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
                           <TableHead>Submitted</TableHead>
-                          <TableHead>Rejected</TableHead>
-                          <TableHead>Reason</TableHead>
+                          <TableHead>Documents</TableHead>
+                          <TableHead>Subjects</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredRequests.filter((r) => r.status === "rejected").length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                              No rejected requests found
+                        {filteredRequests.map((request) => (
+                          <TableRow key={request._id}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback>
+                                    {request.name.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">
+                                    {request.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    ID: {request._id.slice(-6)}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>{request.email}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  request.verification_status === "approved"
+                                    ? "default"
+                                    : request.verification_status === "rejected"
+                                    ? "destructive"
+                                    : "outline"
+                                }
+                              >
+                                {request.verification_status
+                                  .charAt(0)
+                                  .toUpperCase() +
+                                  request.verification_status.slice(1)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(request.createdAt).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              {request.verification_documents?.length || 0}{" "}
+                              files
+                            </TableCell>
+                            <TableCell>
+                              {request.subjects?.length ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {request.subjects.map((subject, i) => (
+                                    <Badge key={i} variant="secondary">
+                                      {subject}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                "None"
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewRequest(request)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                {request.verification_status === "pending" && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleReviewRequest(request)}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
-                        ) : (
-                          filteredRequests
-                            .filter((r) => r.status === "rejected")
-                            .map((request) => (
-                              <TableRow key={request.id}>
-                                <TableCell className="font-medium">{request.id}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarImage src={`https://avatar.vercel.sh/${request.email}`} />
-                                      <AvatarFallback>{request.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <div className="font-medium">{request.name}</div>
-                                      <div className="text-xs text-muted-foreground">{request.email}</div>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>{new Date(request.submittedAt).toLocaleDateString()}</TableCell>
-                                <TableCell>
-                                  {new Date(
-                                    new Date(request.submittedAt).getTime() + 1 * 24 * 60 * 60 * 1000,
-                                  ).toLocaleDateString()}
-                                </TableCell>
-                                <TableCell className="max-w-[200px] truncate">{request.rejectionReason}</TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewRequest(request)}>
-                                      <Eye className="h-4 w-4" />
-                                      <span className="sr-only">View</span>
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleViewDocuments(request)}>
-                                      <FileText className="h-4 w-4" />
-                                      <span className="sr-only">Documents</span>
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                        )}
+                        ))}
                       </TableBody>
                     </Table>
                   </CardContent>
@@ -575,17 +776,25 @@ export default function TutorRequestsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Tutor Details</DialogTitle>
-            <DialogDescription>Review the tutor&apos;s personal information and qualifications</DialogDescription>
+            <DialogDescription>
+              Review the tutor&apos;s personal information and qualifications
+            </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={`https://avatar.vercel.sh/${selectedRequest.email}`} />
-                  <AvatarFallback>{selectedRequest.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage
+                    src={`https://avatar.vercel.sh/${selectedRequest.email}`}
+                  />
+                  <AvatarFallback>
+                    {selectedRequest.name.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="space-y-1">
-                  <h3 className="text-xl font-semibold">{selectedRequest.name}</h3>
+                  <h3 className="text-xl font-semibold">
+                    {selectedRequest.name}
+                  </h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{selectedRequest.email}</span>
                     <span>•</span>
@@ -593,14 +802,17 @@ export default function TutorRequestsPage() {
                   </div>
                   <Badge
                     variant={
-                      selectedRequest.status === "approved"
+                      selectedRequest.verification_status === "approved"
                         ? "default"
-                        : selectedRequest.status === "rejected"
-                          ? "destructive"
-                          : "outline"
+                        : selectedRequest.verification_status === "rejected"
+                        ? "destructive"
+                        : "outline"
                     }
                   >
-                    {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                    {selectedRequest.verification_status
+                      .charAt(0)
+                      .toUpperCase() +
+                      selectedRequest.verification_status.slice(1)}
                   </Badge>
                 </div>
               </div>
@@ -609,31 +821,40 @@ export default function TutorRequestsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Personal Information</h4>
+                  <h4 className="text-sm font-medium mb-2">
+                    Personal Information
+                  </h4>
                   <div className="space-y-2">
                     <div>
-                      <span className="text-sm font-medium text-muted-foreground">Address:</span>
-                      <p className="text-sm">{selectedRequest.address}</p>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Phone:
+                      </span>
+                      <p className="text-sm">
+                        {selectedRequest.phone || "Not provided"}
+                      </p>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-muted-foreground">Request ID:</span>
-                      <p className="text-sm">{selectedRequest.id}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-muted-foreground">Submitted:</span>
-                      <p className="text-sm">{new Date(selectedRequest.submittedAt).toLocaleString()}</p>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Request ID:
+                      </span>
+                      <p className="text-sm">{selectedRequest._id}</p>
                     </div>
                   </div>
                 </div>
-
                 <div>
-                  <h4 className="text-sm font-medium mb-2">Specializations</h4>
+                  <h4 className="text-sm font-medium mb-2">Subjects</h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedRequest.specializations?.map((specialization) => (
-                      <Badge key={specialization} variant="secondary">
-                        {specialization}
-                      </Badge>
-                    ))}
+                    {selectedRequest?.subjects?.length ? (
+                      selectedRequest.subjects.map((subject, i) => (
+                        <Badge key={i} variant="secondary">
+                          {subject}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No subjects specified
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -653,15 +874,24 @@ export default function TutorRequestsPage() {
               <div>
                 <h4 className="text-sm font-medium mb-2">Documents</h4>
                 <div className="space-y-2">
-                  {selectedRequest.documents.map((document) => (
-                    <div key={document.name} className="flex items-center justify-between p-2 border rounded-md">
+                  {selectedRequest.verification_documents.map((document) => (
+                    <div
+                      key={document.name}
+                      className="flex items-center justify-between p-2 border rounded-md"
+                    >
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{document.name}</span>
-                        <span className="text-xs text-muted-foreground">({document.size})</span>
+                        {/* <span className="text-xs text-muted-foreground">
+                          ({document.size})
+                        </span> */}
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handlePreviewDocument(document)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePreviewDocument(document)}
+                        >
                           <Eye className="h-4 w-4 mr-1" />
                           Preview
                         </Button>
@@ -675,9 +905,11 @@ export default function TutorRequestsPage() {
                 </div>
               </div>
 
-              {selectedRequest.status === "rejected" && (
+              {selectedRequest.verification_status === "rejected" && (
                 <div>
-                  <h4 className="text-sm font-medium mb-2 text-destructive">Rejection Reason</h4>
+                  <h4 className="text-sm font-medium mb-2 text-destructive">
+                    Rejection Reason
+                  </h4>
                   <p className="text-sm border border-destructive/20 bg-destructive/10 p-3 rounded-md">
                     {selectedRequest.rejectionReason}
                   </p>
@@ -685,17 +917,20 @@ export default function TutorRequestsPage() {
               )}
 
               <DialogFooter>
-                {selectedRequest.status === "pending" && (
+                {selectedRequest.verification_status === "pending" && (
                   <Button
                     onClick={() => {
-                      setViewingDetails(false)
-                      handleReviewRequest(selectedRequest)
+                      setViewingDetails(false);
+                      handleReviewRequest(selectedRequest);
                     }}
                   >
                     Review Request
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => setViewingDetails(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setViewingDetails(false)}
+                >
                   Close
                 </Button>
               </DialogFooter>
@@ -709,77 +944,95 @@ export default function TutorRequestsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Submitted Documents</DialogTitle>
-            <DialogDescription>Review the documents submitted by {selectedRequest?.name}</DialogDescription>
+            <DialogDescription>
+              Review the documents submitted by {selectedRequest?.name}
+            </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={`https://avatar.vercel.sh/${selectedRequest.email}`} />
-                    <AvatarFallback>{selectedRequest.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage
+                      src={`https://avatar.vercel.sh/${selectedRequest.email}`}
+                    />
+                    <AvatarFallback>
+                      {selectedRequest.name.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="font-medium">{selectedRequest.name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedRequest.email}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {selectedRequest.email}
+                    </div>
                   </div>
                 </div>
                 <Badge
                   variant={
-                    selectedRequest.status === "approved"
+                    selectedRequest.verification_status === "approved"
                       ? "default"
-                      : selectedRequest.status === "rejected"
-                        ? "destructive"
-                        : "outline"
+                      : selectedRequest.verification_status === "rejected"
+                      ? "destructive"
+                      : "outline"
                   }
                 >
-                  {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                  {selectedRequest.verification_status.charAt(0).toUpperCase() +
+                    selectedRequest.verification_status.slice(1)}
                 </Badge>
               </div>
 
               <Separator />
 
               <div className="space-y-4">
-                {selectedRequest.documents.map((document, index) => (
-                  <Card key={index}>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        {document.name}
-                      </CardTitle>
-                      <CardDescription>{document.size}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-2">
-                      <div className="h-40 bg-muted rounded-md flex items-center justify-center">
-                        <FileText className="h-12 w-12 text-muted-foreground opacity-50" />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between">
-                      <Button variant="outline" size="sm" onClick={() => handlePreviewDocument(document)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        Preview
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-1" />
-                        Download
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                {selectedRequest.verification_documents.map(
+                  (document, index) => (
+                    <Card key={index}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          {document.name}
+                        </CardTitle>
+                        {/* <CardDescription>{document.size}</CardDescription> */}
+                      </CardHeader>
+                      <CardContent className="pb-2">
+                        <div className="h-40 bg-muted rounded-md flex items-center justify-center">
+                          <FileText className="h-12 w-12 text-muted-foreground opacity-50" />
+                        </div>
+                      </CardContent>
+                      <CardFooter className="flex justify-between">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePreviewDocument(document)}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          Preview
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Download className="h-4 w-4 mr-1" />
+                          Download
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  )
+                )}
               </div>
 
               <DialogFooter>
-                {selectedRequest.status === "pending" && (
+                {selectedRequest.verification_status === "pending" && (
                   <Button
                     onClick={() => {
-                      setViewingDocuments(false)
-                      handleReviewRequest(selectedRequest)
+                      setViewingDocuments(false);
+                      handleReviewRequest(selectedRequest);
                     }}
                   >
                     Review Request
                   </Button>
                 )}
-                <Button variant="outline" onClick={() => setViewingDocuments(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setViewingDocuments(false)}
+                >
                   Close
                 </Button>
               </DialogFooter>
@@ -794,14 +1047,16 @@ export default function TutorRequestsPage() {
           <DialogHeader>
             <DialogTitle>Document Preview</DialogTitle>
             <DialogDescription>
-              {selectedDocument?.name} ({selectedDocument?.size})
+              {/* {selectedDocument?.name} ({selectedDocument?.size}) */}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="h-[60vh] bg-muted rounded-md flex flex-col items-center justify-center">
               <FileText className="h-16 w-16 text-muted-foreground opacity-50 mb-4" />
               <p className="text-muted-foreground">Preview not available</p>
-              <p className="text-xs text-muted-foreground">Download the document to view it</p>
+              <p className="text-xs text-muted-foreground">
+                Download the document to view it
+              </p>
             </div>
             <DialogFooter>
               <Button variant="outline" size="sm">
@@ -822,19 +1077,31 @@ export default function TutorRequestsPage() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review Tutor Request</DialogTitle>
-            <DialogDescription>Review and make a decision on {selectedRequest?.name}&apos;s request</DialogDescription>
+            <DialogDescription>
+              Review and make a decision on {selectedRequest?.name}&apos;s
+              request
+            </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmitReview)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmitReview)}
+                className="space-y-6"
+              >
                 <div className="flex items-center gap-4">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={`https://avatar.vercel.sh/${selectedRequest.email}`} />
-                    <AvatarFallback>{selectedRequest.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage
+                      src={`https://avatar.vercel.sh/${selectedRequest.email}`}
+                    />
+                    <AvatarFallback>
+                      {selectedRequest.name.charAt(0)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-medium">{selectedRequest.name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedRequest.email}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedRequest.email}
+                    </p>
                   </div>
                 </div>
 
@@ -843,22 +1110,28 @@ export default function TutorRequestsPage() {
                 <div className="grid gap-4">
                   <div className="grid gap-2">
                     <Label>Qualifications</Label>
-                    <div className="p-3 bg-muted rounded-md text-sm">{selectedRequest.qualifications}</div>
+                    <div className="p-3 bg-muted rounded-md text-sm">
+                      {selectedRequest.qualifications}
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label>Experience</Label>
-                    <div className="p-3 bg-muted rounded-md text-sm">{selectedRequest.experience}</div>
+                    <div className="p-3 bg-muted rounded-md text-sm">
+                      {selectedRequest.experience}
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label>Documents</Label>
                     <div className="p-3 bg-muted rounded-md text-sm">
-                      <ul className="list-disc list-inside space-y-1">
-                        {selectedRequest.documents.map((doc, index) => (
-                          <li key={index}>
-                            {doc.name} ({doc.size})
-                          </li>
-                        ))}
-                      </ul>
+                      {/* <ul className="list-disc list-inside space-y-1">
+                        {selectedRequest.verification_documents.map(
+                          (doc, index) => (
+                            <li key={index}>
+                              {doc.name} ({doc.size})
+                            </li>
+                          )
+                        )}
+                      </ul> */}
                     </div>
                   </div>
                 </div>
@@ -881,13 +1154,17 @@ export default function TutorRequestsPage() {
                             <FormControl>
                               <RadioGroupItem value="approved" />
                             </FormControl>
-                            <FormLabel className="font-normal">Approve - Grant tutor status</FormLabel>
+                            <FormLabel className="font-normal">
+                              Approve - Grant tutor status
+                            </FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
                               <RadioGroupItem value="rejected" />
                             </FormControl>
-                            <FormLabel className="font-normal">Reject - Deny tutor status</FormLabel>
+                            <FormLabel className="font-normal">
+                              Reject - Deny tutor status
+                            </FormLabel>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
@@ -909,7 +1186,9 @@ export default function TutorRequestsPage() {
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>These comments are for internal use only.</FormDescription>
+                      <FormDescription>
+                        These comments are for internal use only.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -929,7 +1208,9 @@ export default function TutorRequestsPage() {
                             {...field}
                           />
                         </FormControl>
-                        <FormDescription>This reason will be shared with the tutor.</FormDescription>
+                        <FormDescription>
+                          This reason will be shared with the tutor.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -937,11 +1218,17 @@ export default function TutorRequestsPage() {
                 )}
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setReviewingRequest(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setReviewingRequest(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit">
-                    {form.watch("status") === "approved" ? "Approve Request" : "Reject Request"}
+                    {form.watch("status") === "approved"
+                      ? "Approve Request"
+                      : "Reject Request"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -950,5 +1237,5 @@ export default function TutorRequestsPage() {
         </DialogContent>
       </Dialog>
     </SidebarProvider>
-  )
+  );
 }

@@ -125,14 +125,14 @@ export function TutorSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/tutor/verification")}>
                   <Link href="/tutor/verification">
                     <CheckCircle className="h-4 w-4" />
                     <span>Verification</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/tutor/settings")}>
                   <Link href="/tutor/settings">

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "lucide-react": "^0.503.0",
+    "zod": "^3.24.3"
+  }
+}
