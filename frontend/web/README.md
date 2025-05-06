@@ -1,4 +1,4 @@
-# EduConnect - Online Learning Platform
+<!-- # EduConnect - Online Learning Platform
 
 EduConnect is a comprehensive online learning platform built with Next.js, Tailwind CSS, and shadcn/ui. It provides a seamless experience for students, tutors, and administrators with features like course management, video conferencing, document verification, and more.
 
@@ -204,4 +204,4 @@ EduConnect uses Chapa for payment processing, a secure payment gateway that supp
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please feel free to submit a Pull Request. -->

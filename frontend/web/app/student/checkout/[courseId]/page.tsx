@@ -1,120 +1,169 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Info } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Info } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { StudentSidebar } from "@/components/student-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import DirectChapaButton from "@/components/payment/direct-chapa-button"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { StudentSidebar } from "@/components/student-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import DirectChapaButton from "@/components/payment/direct-chapa-button";
 
 interface Tutor {
-  name: string
-  avatar?: string
-  rating: number
+  name: string;
+  avatar?: string;
+  rating: number;
 }
 
 interface Pricing {
   online?: {
-    price: number
-    maxStudents: number
+    price: number;
+    maxStudents: number;
     schedule: Array<{
-      day: string
-      startTime: string
-      endTime: string
-    }>
-  }
+      day: string;
+      startTime: string;
+      endTime: string;
+    }>;
+  };
   group?: {
-    price: number
-    maxStudents: number
+    price: number;
+    maxStudents: number;
     schedule: Array<{
-      day: string
-      startTime: string
-      endTime: string
-    }>
-  }
+      day: string;
+      startTime: string;
+      endTime: string;
+    }>;
+  };
   oneOnOne?: {
-    price: number
-    maxStudents: number
+    price: number;
+    maxStudents: number;
     schedule: Array<{
-      day: string
-      startTime: string
-      endTime: string
-    }>
-  }
+      day: string;
+      startTime: string;
+      endTime: string;
+    }>;
+  };
+}
+
+interface Module {
+  _id: string;
+  title: string;
+  order: number;
+  isPublished: boolean;
+  createdAt: string;
 }
 
 interface Course {
-  _id: string
-  title: string
-  description: string
-  category: string
-  level: string
-  tutor: Tutor
-  currentEnrollment: number
-  capacity: number
-  rating: number
-  reviews: number
-  image?: string
-  sessionTypes: string[]
-  pricing: Pricing
-  prerequisites: string[]
-  status: string
-  createdAt: string
-  updatedAt: string
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  tutor: Tutor;
+  currentEnrollment: number;
+  capacity: number;
+  rating: number;
+  reviews: number;
+  image?: string;
+  sessionTypes: string[];
+  pricing: Pricing;
+  prerequisites: string[];
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  modules?: Module[];
 }
 
 export default function CheckoutPage() {
-  const params = useParams()
-  const router = useRouter()
-  const { toast } = useToast()
-  const courseId = params.courseId as string
+  const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
+  const courseId = params.courseId as string;
 
-  const [course, setCourse] = (useState<Course | null>(null))
-  const [loading, setLoading] = useState(true)
-  const [paymentOption, setPaymentOption] = useState("full")
-  const [sessionType, setSessionType] = useState("online")
-  const [paymentError, setPaymentError] = useState("")
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [paymentOption, setPaymentOption] = useState("full");
+  const [sessionType, setSessionType] = useState("online");
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch(`http://localhost:5000/api/course/${courseId}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("token") || ""
+            : "";
 
-        if (!response.ok) throw new Error('Failed to fetch course details')
+        // First fetch course details
+        const courseRes = await fetch(
+          `http://localhost:5000/api/course/${courseId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-        const data = await response.json()
-        setCourse(data)
-        // Set default session type to first available option
-        if (data.sessionTypes.length > 0) {
-          setSessionType(data.sessionTypes[0])
+        if (!courseRes.ok) throw new Error("Failed to fetch course details");
+        const courseData = await courseRes.json();
+
+        // Then try to fetch modules (handle potential 404)
+        let modulesData: Module[] = [];
+        try {
+          const modulesRes = await fetch(
+            `http://localhost:5000/api/course/module/${courseId}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+
+          if (modulesRes.ok) {
+            modulesData = await modulesRes.json();
+          }
+          // Silently continue if modules endpoint fails
+        } catch (moduleError) {
+          console.warn("Failed to fetch modules:", moduleError);
+        }
+
+        setCourse({
+          ...courseData,
+          modules: modulesData,
+        });
+
+        // Set default session type
+        if (courseData.sessionTypes.length > 0) {
+          setSessionType(courseData.sessionTypes[0]);
         }
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch course details",
-        })
-        router.push("/student/explore")
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch course details",
+        });
+        router.push("/student/explore");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchCourse()
-  }, [courseId, router, toast])
+    fetchCourse();
+  }, [courseId, router, toast]);
 
   if (loading) {
     return (
@@ -132,7 +181,9 @@ export default function CheckoutPage() {
                 </Button>
                 <div>
                   <h1 className="text-lg font-semibold">Checkout</h1>
-                  <p className="text-sm text-muted-foreground">Complete your enrollment</p>
+                  <p className="text-sm text-muted-foreground">
+                    Complete your enrollment
+                  </p>
                 </div>
               </div>
             </div>
@@ -142,7 +193,7 @@ export default function CheckoutPage() {
           </main>
         </div>
       </SidebarProvider>
-    )
+    );
   }
 
   if (!course) {
@@ -161,7 +212,9 @@ export default function CheckoutPage() {
                 </Button>
                 <div>
                   <h1 className="text-lg font-semibold">Checkout</h1>
-                  <p className="text-sm text-muted-foreground">Complete your enrollment</p>
+                  <p className="text-sm text-muted-foreground">
+                    Complete your enrollment
+                  </p>
                 </div>
               </div>
             </div>
@@ -169,25 +222,30 @@ export default function CheckoutPage() {
               <Alert variant="destructive" className="max-w-md">
                 <AlertTitle>Course Not Found</AlertTitle>
                 <AlertDescription>
-                  The course you're trying to enroll in could not be found. Please return to the courses page and try again.
+                  The course you're trying to enroll in could not be found.
+                  Please return to the courses page and try again.
                 </AlertDescription>
               </Alert>
             </div>
           </main>
         </div>
       </SidebarProvider>
-    )
+    );
   }
 
   // Calculate prices based on selected options
-  const basePrice = course.pricing[sessionType as keyof typeof course.pricing]?.price || 0
-  const installmentPrice = Math.round((basePrice / 3) * 100) / 100
-  const totalPrice = paymentOption === "full" ? basePrice : installmentPrice
+  const basePrice =
+    course.pricing[sessionType as keyof typeof course.pricing]?.price || 0;
+  const installmentPrice = Math.round((basePrice / 3) * 100) / 100;
+  const totalPrice = paymentOption === "full" ? basePrice : installmentPrice;
 
   // Check if selected session type is available
   const isSessionTypeAvailable = (type: string) => {
-    return course.sessionTypes.includes(type) && course.pricing[type as keyof typeof course.pricing]?.price
-  }
+    return (
+      course.sessionTypes.includes(type) &&
+      course.pricing[type as keyof typeof course.pricing]?.price
+    );
+  };
 
   return (
     <SidebarProvider>
@@ -204,7 +262,9 @@ export default function CheckoutPage() {
               </Button>
               <div>
                 <h1 className="text-lg font-semibold">Checkout</h1>
-                <p className="text-sm text-muted-foreground">Complete your enrollment</p>
+                <p className="text-sm text-muted-foreground">
+                  Complete your enrollment
+                </p>
               </div>
             </div>
           </div>
@@ -215,7 +275,9 @@ export default function CheckoutPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Course Details</CardTitle>
-                    <CardDescription>Review the course you're enrolling in</CardDescription>
+                    <CardDescription>
+                      Review the course you're enrolling in
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex gap-4">
@@ -228,51 +290,103 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <h3 className="font-medium text-lg">{course.title}</h3>
-                        <p className="text-sm text-muted-foreground">{course.description}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {course.description}
+                        </p>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex items-center gap-1">
-                            <span className="text-sm font-medium">{course.tutor.name}</span>
+                            <span className="text-sm font-medium">
+                              {course.tutor.name}
+                            </span>
                           </div>
                           <span className="text-muted-foreground">•</span>
-                          <span className="text-sm text-muted-foreground">{course.level}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {course.level}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Updated Modules Section with proper error handling */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Course Curriculum</CardTitle>
+                    <CardDescription>
+                      What you'll learn in this course
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {course.modules && course.modules.length > 0 ? (
+                      [...course.modules]
+                        .sort((a, b) => a.order - b.order)
+                        .map((module, index) => (
+                          <div
+                            key={module._id}
+                            className="flex items-start gap-3"
+                          >
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 mt-0.5 flex-shrink-0">
+                              <span className="text-xs font-medium text-primary">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <p className="text-sm">{module.title}</p>
+                          </div>
+                        ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {course.modules
+                          ? "No modules available yet"
+                          : "Could not load modules"}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Payment Options</CardTitle>
-                    <CardDescription>Choose how you want to pay</CardDescription>
+                    <CardDescription>
+                      Choose how you want to pay
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <h3 className="font-medium">Session Type</h3>
-                      <Tabs 
-                        defaultValue={course.sessionTypes[0]} 
-                        value={sessionType} 
+                      <Tabs
+                        defaultValue={course.sessionTypes[0]}
+                        value={sessionType}
                         onValueChange={setSessionType}
                       >
-                        <TabsList className="grid w-full" style={{ 
-                          gridTemplateColumns: `repeat(${course.sessionTypes.length}, minmax(0, 1fr))` 
-                        }}>
-                          {isSessionTypeAvailable('online') && (
+                        <TabsList
+                          className="grid w-full"
+                          style={{
+                            gridTemplateColumns: `repeat(${course.sessionTypes.length}, minmax(0, 1fr))`,
+                          }}
+                        >
+                          {isSessionTypeAvailable("online") && (
                             <TabsTrigger value="online">
                               Online Course
-                              <span className="ml-1 text-xs">${course.pricing.online?.price}</span>
+                              <span className="ml-1 text-xs">
+                                ${course.pricing.online?.price}
+                              </span>
                             </TabsTrigger>
                           )}
-                          {isSessionTypeAvailable('group') && (
+                          {isSessionTypeAvailable("group") && (
                             <TabsTrigger value="group">
                               Group Sessions
-                              <span className="ml-1 text-xs">${course.pricing.group?.price}</span>
+                              <span className="ml-1 text-xs">
+                                ${course.pricing.group?.price}
+                              </span>
                             </TabsTrigger>
                           )}
-                          {isSessionTypeAvailable('oneOnOne') && (
+                          {isSessionTypeAvailable("oneOnOne") && (
                             <TabsTrigger value="oneOnOne">
                               1-on-1 Sessions
-                              <span className="ml-1 text-xs">${course.pricing.oneOnOne?.price}</span>
+                              <span className="ml-1 text-xs">
+                                ${course.pricing.oneOnOne?.price}
+                              </span>
                             </TabsTrigger>
                           )}
                         </TabsList>
@@ -283,22 +397,41 @@ export default function CheckoutPage() {
 
                     <div className="space-y-4">
                       <h3 className="font-medium">Payment Plan</h3>
-                      <RadioGroup defaultValue="full" value={paymentOption} onValueChange={setPaymentOption}>
+                      <RadioGroup
+                        defaultValue="full"
+                        value={paymentOption}
+                        onValueChange={setPaymentOption}
+                      >
                         <div className="flex items-center space-x-2 border rounded-md p-4">
                           <RadioGroupItem value="full" id="full" />
-                          <Label htmlFor="full" className="flex-1 cursor-pointer">
+                          <Label
+                            htmlFor="full"
+                            className="flex-1 cursor-pointer"
+                          >
                             <div className="font-medium">Full Payment</div>
-                            <div className="text-sm text-muted-foreground">Pay the entire amount now</div>
+                            <div className="text-sm text-muted-foreground">
+                              Pay the entire amount now
+                            </div>
                           </Label>
                           <div className="font-medium">${basePrice}</div>
                         </div>
                         <div className="flex items-center space-x-2 border rounded-md p-4">
-                          <RadioGroupItem value="installment" id="installment" />
-                          <Label htmlFor="installment" className="flex-1 cursor-pointer">
+                          <RadioGroupItem
+                            value="installment"
+                            id="installment"
+                          />
+                          <Label
+                            htmlFor="installment"
+                            className="flex-1 cursor-pointer"
+                          >
                             <div className="font-medium">Installment Plan</div>
-                            <div className="text-sm text-muted-foreground">Pay in 3 monthly installments</div>
+                            <div className="text-sm text-muted-foreground">
+                              Pay in 3 monthly installments
+                            </div>
                           </Label>
-                          <div className="font-medium">${installmentPrice}/mo</div>
+                          <div className="font-medium">
+                            ${installmentPrice}/mo
+                          </div>
                         </div>
                       </RadioGroup>
                     </div>
@@ -308,8 +441,8 @@ export default function CheckoutPage() {
                         <Info className="h-4 w-4" />
                         <AlertTitle>Installment Plan Details</AlertTitle>
                         <AlertDescription>
-                          You'll be charged ${installmentPrice} today, and the same amount on the same day for the next
-                          2 months.
+                          You'll be charged ${installmentPrice} today, and the
+                          same amount on the same day for the next 2 months.
                         </AlertDescription>
                       </Alert>
                     )}
@@ -324,12 +457,16 @@ export default function CheckoutPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Course Price</span>
+                      <span className="text-muted-foreground">
+                        Course Price
+                      </span>
                       <span>${basePrice}</span>
                     </div>
                     {paymentOption === "installment" && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Installment (1/3)</span>
+                        <span className="text-muted-foreground">
+                          Installment (1/3)
+                        </span>
                         <span>${installmentPrice}</span>
                       </div>
                     )}
@@ -352,12 +489,17 @@ export default function CheckoutPage() {
                       email="student@example.com" // Replace with actual user email
                       firstName="Student" // Replace with actual user first name
                       lastName="User" // Replace with actual user last name
-                      title={`${course.title} - ${sessionType} ${paymentOption === "installment" ? "(Installment 1/3)" : ""}`}
+                      title={`${course.title} - ${sessionType} ${
+                        paymentOption === "installment"
+                          ? "(Installment 1/3)"
+                          : ""
+                      }`}
                       currency="ETB"
                       onError={(error) => setPaymentError(error)}
                     />
                     <div className="text-center text-sm text-muted-foreground">
-                      By proceeding, you agree to our Terms of Service and Privacy Policy.
+                      By proceeding, you agree to our Terms of Service and
+                      Privacy Policy.
                     </div>
                   </CardFooter>
                 </Card>
@@ -367,5 +509,5 @@ export default function CheckoutPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }

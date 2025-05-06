@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Calendar,
@@ -15,7 +15,7 @@ import {
   Settings,
   Users,
   Video,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -28,25 +28,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth-provider"
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-provider";
 
 export function TutorSidebar() {
-  const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(`${path}/`)
-  }
+    return pathname === path || pathname?.startsWith(`${path}/`);
+  };
 
   return (
     <Sidebar>
@@ -62,7 +62,10 @@ export function TutorSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/dashboard")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/dashboard")}
+                >
                   <Link href="/tutor/dashboard">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
@@ -70,7 +73,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/courses")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/courses")}
+                >
                   <Link href="/tutor/courses">
                     <BookOpen className="h-4 w-4" />
                     <span>My Courses</span>
@@ -78,7 +84,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/create-course")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/create-course")}
+                >
                   <Link href="/tutor/create-course">
                     <PlusCircle className="h-4 w-4" />
                     <span>Create Course</span>
@@ -86,7 +95,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/students")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/students")}
+                >
                   <Link href="/tutor/students">
                     <Users className="h-4 w-4" />
                     <span>My Students</span>
@@ -94,7 +106,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/video-session")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/video-session")}
+                >
                   <Link href="/tutor/video-session">
                     <Video className="h-4 w-4" />
                     <span>Video Sessions</span>
@@ -102,15 +117,21 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/schedule")}>
-                  <Link href="/tutor/schedule">
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/schedule")}
+                >
+                  <Link href="/tutor/sessions">
                     <Calendar className="h-4 w-4" />
                     <span>Schedule</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/documents")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/documents")}
+                >
                   <Link href="/tutor/documents">
                     <FileText className="h-4 w-4" />
                     <span>Documents</span>
@@ -118,7 +139,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/earnings")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/earnings")}
+                >
                   <Link href="/tutor/earnings">
                     <DollarSign className="h-4 w-4" />
                     <span>Earnings</span>
@@ -126,7 +150,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/verification")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/verification")}
+                >
                   <Link href="/tutor/verification">
                     <CheckCircle className="h-4 w-4" />
                     <span>Verification</span>
@@ -134,7 +161,10 @@ export function TutorSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/tutor/settings")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/tutor/settings")}
+                >
                   <Link href="/tutor/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
@@ -150,7 +180,9 @@ export function TutorSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start px-2">
               <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage src={`https://avatar.vercel.sh/${user?.id || "user"}`} />
+                <AvatarImage
+                  src={`https://avatar.vercel.sh/${user?.id || "user"}`}
+                />
                 <AvatarFallback>
                   {user?.firstName?.charAt(0) || "U"}
                   {user?.lastName?.charAt(0) || ""}
@@ -178,5 +210,5 @@ export function TutorSidebar() {
         </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
