@@ -1,33 +1,66 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { FileText, Upload, X } from "lucide-react";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { FileText, Upload, X } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+import { TutorSidebar } from "@/components/tutor-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
-import { TutorSidebar } from "@/components/tutor-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_FILE_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/jpg",
+];
 
 const documentVerificationSchema = z.object({
+  fullName: z.string().min(2, {
+    message: "Full name must be at least 2 characters",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address",
+  }),
+  phone: z.string().min(10, {
+    message: "Phone number must be at least 10 digits",
+  }),
   qualifications: z.string().min(1, {
     message: "Please enter your qualifications",
   }),
   specialization: z.string().min(1, {
-    message: "Please enter your specialization",
+    message: "Please describe your areas of specialization",
   }),
   experience: z.string().min(1, {
     message: "Please enter your teaching experience",
@@ -38,54 +71,61 @@ const documentVerificationSchema = z.object({
   documentDescription: z.string().min(1, {
     message: "Please provide a description for your document",
   }),
-})
+});
 
-type DocumentVerificationFormValues = z.infer<typeof documentVerificationSchema>
+type DocumentVerificationFormValues = z.infer<
+  typeof documentVerificationSchema
+>;
 
 interface UploadedFile {
-  file: File
-  id: string
-  name: string
-  type: string
-  size: number
-  preview: string | null
+  file: File;
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  preview: string | null;
 }
 
 export default function DocumentVerificationPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
-  const [uploadError, setUploadError] = useState("")
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploadError, setUploadError] = useState("");
 
   const form = useForm<DocumentVerificationFormValues>({
     resolver: zodResolver(documentVerificationSchema),
     defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
       qualifications: "",
       specialization: "",
       experience: "",
       documentType: "",
       documentDescription: "",
     },
-  })
+  });
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return
+    if (!e.target.files || e.target.files.length === 0) return;
 
-    const files = Array.from(e.target.files)
-    setUploadError("")
+    const files = Array.from(e.target.files);
+    setUploadError("");
 
     const invalidFiles = files.filter((file) => {
       if (file.size > MAX_FILE_SIZE) {
-        setUploadError(`File ${file.name} is too large. Maximum size is 5MB.`)
-        return true
+        setUploadError(`File ${file.name} is too large. Maximum size is 5MB.`);
+        return true;
       }
       if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
-        setUploadError(`File ${file.name} has an invalid type. Accepted types are PDF, JPEG, and PNG.`)
-        return true
+        setUploadError(
+          `File ${file.name} has an invalid type. Accepted types are PDF, JPEG, and PNG.`
+        );
+        return true;
       }
-      return false
-    })
+      return false;
+    });
 
     if (invalidFiles.length === 0) {
       const newFiles = files.map((file) => ({
@@ -94,48 +134,46 @@ export default function DocumentVerificationPage() {
         name: file.name,
         type: file.type,
         size: file.size,
-        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-      }))
+        preview: file.type.startsWith("image/")
+          ? URL.createObjectURL(file)
+          : null,
+      }));
 
-      setUploadedFiles((prev) => [...prev, ...newFiles])
+      setUploadedFiles((prev) => [...prev, ...newFiles]);
     }
-  }
+  };
 
   const removeFile = (id: string) => {
-    setUploadedFiles((prev) => prev.filter((file) => file.id !== id))
-  }
+    setUploadedFiles((prev) => prev.filter((file) => file.id !== id));
+  };
 
   async function onSubmit(values: DocumentVerificationFormValues) {
     if (uploadedFiles.length === 0) {
-      setUploadError("Please upload at least one document")
-      return
+      setUploadError("Please upload at least one document");
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      // This would be replaced with actual API call
-      console.log(values)
-      console.log(uploadedFiles)
-
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       toast({
         title: "Documents submitted successfully",
-        description: "Your verification documents have been submitted for review.",
-      })
+        description:
+          "Your verification documents have been submitted for review.",
+      });
 
-      // Redirect to pending page
-      router.push("/tutor/verification/pending")
+      router.push("/tutor/verification/pending");
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Failed to submit documents. Please try again.",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -147,17 +185,78 @@ export default function DocumentVerificationPage() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">Tutor Verification</h1>
-              <p className="text-sm text-muted-foreground">Submit your documents for verification</p>
+              <p className="text-sm text-muted-foreground">
+                Submit your documents for verification
+              </p>
             </div>
           </div>
           <div className="flex-1 space-y-4 p-8 pt-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                {/* Personal Information Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>
+                      Provide your basic contact information
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="your.email@example.com"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Phone Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+1 (555) 123-4567" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Professional Information Card */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Professional Information</CardTitle>
                     <CardDescription>
-                      Provide information about your qualifications and teaching experience
+                      Provide information about your qualifications and teaching
+                      experience
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -175,12 +274,15 @@ export default function DocumentVerificationPage() {
                             />
                           </FormControl>
                           <FormDescription>
-                            List your degrees, certifications, and relevant educational qualifications
+                            List your degrees, certifications, and relevant
+                            educational qualifications
                           </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
+                    {/* Specialization Text Field */}
                     <FormField
                       control={form.control}
                       name="specialization"
@@ -188,13 +290,21 @@ export default function DocumentVerificationPage() {
                         <FormItem>
                           <FormLabel>Areas of Specialization</FormLabel>
                           <FormControl>
-                            <Input placeholder="e.g. Web Development, Data Science, Digital Marketing" {...field} />
+                            <Textarea
+                              placeholder="e.g. Advanced Mathematics, Organic Chemistry, Machine Learning"
+                              className="min-h-[80px]"
+                              {...field}
+                            />
                           </FormControl>
-                          <FormDescription>Enter the subjects or topics you specialize in teaching</FormDescription>
+                          <FormDescription>
+                            Describe your specific teaching specialties and
+                            areas of expertise
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
+
                     <FormField
                       control={form.control}
                       name="experience"
@@ -203,14 +313,11 @@ export default function DocumentVerificationPage() {
                           <FormLabel>Teaching Experience</FormLabel>
                           <FormControl>
                             <Textarea
-                              placeholder="e.g. 5 years teaching web development at XYZ University"
+                              placeholder="Describe your teaching experience in detail..."
                               className="min-h-[100px]"
                               {...field}
                             />
                           </FormControl>
-                          <FormDescription>
-                            Describe your teaching experience, including years of experience and institutions
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -218,10 +325,14 @@ export default function DocumentVerificationPage() {
                   </CardContent>
                 </Card>
 
+                {/* Document Upload Card */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Document Upload</CardTitle>
-                    <CardDescription>Upload documents to verify your identity and qualifications</CardDescription>
+                    <CardDescription>
+                      Upload documents to verify your identity and
+                      qualifications
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2">
@@ -231,21 +342,31 @@ export default function DocumentVerificationPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Document Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select document type" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="degree">Degree Certificate</SelectItem>
-                                <SelectItem value="id">Government ID</SelectItem>
-                                <SelectItem value="teaching_cert">Teaching Certificate</SelectItem>
-                                <SelectItem value="resume">Resume/CV</SelectItem>
+                                <SelectItem value="degree">
+                                  Degree Certificate
+                                </SelectItem>
+                                <SelectItem value="id">
+                                  Government ID
+                                </SelectItem>
+                                <SelectItem value="teaching_cert">
+                                  Teaching Certificate
+                                </SelectItem>
+                                <SelectItem value="resume">
+                                  Resume/CV
+                                </SelectItem>
                                 <SelectItem value="other">Other</SelectItem>
                               </SelectContent>
                             </Select>
-                            <FormDescription>Select the type of document you are uploading</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -257,9 +378,11 @@ export default function DocumentVerificationPage() {
                           <FormItem>
                             <FormLabel>Document Description</FormLabel>
                             <FormControl>
-                              <Input placeholder="e.g. Master's Degree in Computer Science" {...field} />
+                              <Input
+                                placeholder="e.g. Master's Degree Certificate"
+                                {...field}
+                              />
                             </FormControl>
-                            <FormDescription>Provide a brief description of the document</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -275,9 +398,14 @@ export default function DocumentVerificationPage() {
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
                             <p className="mb-1 text-sm text-muted-foreground">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
+                              <span className="font-semibold">
+                                Click to upload
+                              </span>{" "}
+                              or drag and drop
                             </p>
-                            <p className="text-xs text-muted-foreground">PDF, PNG, JPG (MAX. 5MB)</p>
+                            <p className="text-xs text-muted-foreground">
+                              PDF, PNG, JPG (MAX. 5MB)
+                            </p>
                           </div>
                           <input
                             id="dropzone-file"
@@ -289,25 +417,41 @@ export default function DocumentVerificationPage() {
                           />
                         </label>
                       </div>
-                      {uploadError && <p className="mt-2 text-sm text-destructive">{uploadError}</p>}
+                      {uploadError && (
+                        <p className="mt-2 text-sm text-destructive">
+                          {uploadError}
+                        </p>
+                      )}
                     </div>
 
                     {uploadedFiles.length > 0 && (
                       <div className="mt-4">
-                        <h3 className="text-sm font-medium mb-2">Uploaded Documents</h3>
+                        <h3 className="text-sm font-medium mb-2">
+                          Uploaded Documents
+                        </h3>
                         <div className="space-y-2">
                           {uploadedFiles.map((file) => (
-                            <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div
+                              key={file.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                            >
                               <div className="flex items-center space-x-3">
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                                 <div>
-                                  <p className="text-sm font-medium truncate max-w-[200px]">{file.name}</p>
+                                  <p className="text-sm font-medium truncate max-w-[200px]">
+                                    {file.name}
+                                  </p>
                                   <p className="text-xs text-muted-foreground">
                                     {(file.size / 1024 / 1024).toFixed(2)} MB
                                   </p>
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={() => removeFile(file.id)}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeFile(file.id)}
+                                aria-label="Remove file"
+                              >
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
@@ -316,12 +460,18 @@ export default function DocumentVerificationPage() {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="outline" type="button" onClick={() => router.back()}>
+                  <CardFooter className="flex justify-between pt-6">
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => router.back()}
+                    >
                       Cancel
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Submitting..." : "Submit for Verification"}
+                      {isSubmitting
+                        ? "Submitting..."
+                        : "Submit for Verification"}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -331,5 +481,5 @@ export default function DocumentVerificationPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }

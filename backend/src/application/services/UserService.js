@@ -17,7 +17,7 @@ class UserService {
 
   // Get all tutors
   async getAllTutors() {
-    return await Tutor.find();
+    return await User.find({ role: "tutor" });
   }
 
   // Get all admins
@@ -55,11 +55,14 @@ class UserService {
     if (!user) return null;
 
     // Delete user
-    const model = user.constructor; 
+    const model = user.constructor;
     await model.deleteOne({ _id: userId });
 
     return user;
   }
+  async getUserWithPassword(userId) {
+    return User.findById(userId).select("+password");
+  }
 }
 
-export default new UserService(); 
+export default new UserService();

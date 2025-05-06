@@ -110,6 +110,71 @@ class UserController {
       res.status(400).json({ message: error.message });
     }
   }
+
+
+ async changePassword(req, res) {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    try {
+      // Validate input
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+          message: "Current password and new password are required" 
+        });
+      }
+
+      if (currentPassword === newPassword) {
+        return res.status(400).json({ 
+          message: "New password must be different from current password" 
+        });
+      }
+
+      // Get user with password field
+      const user = await UserService.getUserWithPassword(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ 
+          message: "Current password is incorrect" 
+        });
+      }
+
+      // Hash new password and update
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+      
+      const updatedUser = await UserService.updateUser(userId, { 
+        password: hashedPassword 
+      });
+
+      res.status(200).json({ 
+        message: "Password updated successfully",
+        user: updatedUser 
+      });
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Middleware to prevent frequent password changes
+  async passwordChangeLimiter(req, res, next) {
+    try {
+      const user = await UserService.getUserById(req.user.id);
+      if (user.updatedAt && Date.now() - user.updatedAt.getTime() < 24 * 60 * 60 * 1000) {
+        return res.status(429).json({
+          message: "You can only change your password once per day"
+        });
+      }
+      next();
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 
 export default new UserController();
