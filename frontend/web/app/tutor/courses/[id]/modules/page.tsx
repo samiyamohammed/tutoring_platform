@@ -138,6 +138,8 @@ export default function CourseContentPage() {
   const router = useRouter();
   const courseId = params.id as string;
   const { toast } = useToast();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   // State for modules list
   const [modules, setModules] = useState<Module[]>([]);  // Initialize as empty array
@@ -169,7 +171,7 @@ export default function CourseContentPage() {
         }
 
         const response = await fetch(
-          `http://localhost:5000/api/course/${courseId}`,
+          `${apiUrl}/api/course/${courseId}`,
           {
             method: "GET",
             headers: {
@@ -210,10 +212,10 @@ export default function CourseContentPage() {
     if (!id) return '';
 
     if (url.includes('/api/files/')) {
-      return `http://localhost:5000/api/files/${id}`;
+      return `${apiUrl}/api/files/${id}`;
     }
     if (url.includes('/api/videos/')) {
-      return `http://localhost:5000/api/videos/stream/${id}`;
+      return `${apiUrl}/api/videos/stream/${id}`;
     }
     return id;
   };
@@ -336,7 +338,7 @@ export default function CourseContentPage() {
       }
 
       const response = await fetch(
-        `http://localhost:5000/api/course/${courseId}/modules`,
+        `${apiUrl}/api/course/${courseId}/modules`,
         {
           method: "POST",
           headers: {
@@ -360,7 +362,7 @@ export default function CourseContentPage() {
 
       // Refresh modules list
       const modulesResponse = await fetch(
-        `http://localhost:5000/api/course/${courseId}/modules`,
+        `${apiUrl}/api/course/${courseId}/modules`,
         {
           method: "GET",
           headers: {

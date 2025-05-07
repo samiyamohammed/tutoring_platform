@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { BookOpen, Filter, Search, Star, Users } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -69,17 +68,20 @@ interface Course {
   category: string
   level: string
   tutor: Tutor
-  currentEnrollment: number
-  capacity: number
-  rating: number
-  reviews: number
-  image?: string
   sessionTypes: string[]
   pricing: Pricing
   prerequisites: string[]
   status: string
   createdAt: string
   updatedAt: string
+  currentEnrollment: number
+  capacity: number
+  waitingListCapacity: number
+  waitingList: string[]
+  image?: string
+  rating: number
+  reviews: number
+  deadline?: string
 }
 
 export default function ExploreCoursesPage() {
@@ -96,12 +98,14 @@ export default function ExploreCoursesPage() {
   const [priceRange, setPriceRange] = useState([0, 350])
   const [sortBy, setSortBy] = useState("popular")
   const { toast } = useToast()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch('http://localhost:5000/api/course', {
+        const response = await fetch(`${apiUrl}/api/course`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
 
@@ -447,6 +451,17 @@ function CourseCard({ course }: { course: Course }) {
   const hasGroup = course.sessionTypes.includes('group')
   const hasOneOnOne = course.sessionTypes.includes('oneOnOne')
 
+  // Calculate total capacity based on session types
+  const totalCapacity = [
+    hasOnline ? course.pricing.online?.maxStudents || 0 : 0,
+    hasGroup ? course.pricing.group?.maxStudents || 0 : 0,
+    hasOneOnOne ? course.pricing.oneOnOne?.maxStudents || 0 : 0
+  ].reduce((sum, capacity) => sum + capacity, 0)
+
+  // Calculate available seats
+  const availableSeats = totalCapacity - course.currentEnrollment
+  const isFull = availableSeats <= 0
+
   return (
     <Card className="overflow-hidden flex flex-col h-full">
       <div className="aspect-video w-full overflow-hidden">
@@ -468,9 +483,7 @@ function CourseCard({ course }: { course: Course }) {
         <div className="flex items-center gap-2 mb-2">
           <Avatar className="h-6 w-6">
             <AvatarImage src={course.tutor?.avatar || "/placeholder.svg"} alt={course.tutor?.name || "Tutor"} />
-            <AvatarFallback>
-              {course.tutor?.name?.charAt(0) || "T"}
-            </AvatarFallback>
+            <AvatarFallback>{course.tutor?.name?.charAt(0) || "T"}</AvatarFallback>
           </Avatar>
           <span className="text-sm">{course.tutor?.name || "Tutor Name"}</span>
           <div className="flex items-center ml-auto">
@@ -479,15 +492,17 @@ function CourseCard({ course }: { course: Course }) {
             <span className="text-xs text-muted-foreground ml-1">({course.reviews})</span>
           </div>
         </div>
+        
+        {/* Session types and pricing */}
         <div className="flex flex-wrap gap-2 mt-3">
           {hasOnline && course.pricing.online && (
             <Badge variant="secondary" className="bg-background">
-              Online: ${course.pricing.online.price}
+              Online: ${course.pricing.online.price} (max {course.pricing.online.maxStudents})
             </Badge>
           )}
           {hasGroup && course.pricing.group && (
             <Badge variant="secondary" className="bg-background">
-              Group: ${course.pricing.group.price}
+              Group: ${course.pricing.group.price} (max {course.pricing.group.maxStudents})
             </Badge>
           )}
           {hasOneOnOne && course.pricing.oneOnOne && (
@@ -496,16 +511,37 @@ function CourseCard({ course }: { course: Course }) {
             </Badge>
           )}
         </div>
+
+        {/* Enrollment status */}
         <div className="flex items-center text-sm text-muted-foreground mt-3">
           <Users className="h-4 w-4 mr-1" />
           <span>
-            {course.currentEnrollment}/{course.capacity} students
+            {course.currentEnrollment}/{totalCapacity} students • 
+            <span className={isFull ? "text-destructive ml-1" : "text-success ml-1"}>
+              {isFull ? "Full" : `${availableSeats} seats available`}
+            </span>
           </span>
         </div>
+
+        {/* Waiting list info if applicable */}
+        {course.waitingListCapacity > 0 && (
+          <div className="text-xs text-muted-foreground mt-1">
+            {course.waitingList?.length || 0} on waiting list ({course.waitingListCapacity} max)
+          </div>
+        )}
+
+        {/* Course deadline if set */}
+        {course.deadline && (
+          <div className="text-xs text-muted-foreground mt-1">
+            Enrollment closes: {new Date(course.deadline).toLocaleDateString()}
+          </div>
+        )}
       </CardContent>
       <CardFooter className="p-4 pt-0 mt-auto">
         <Button className="w-full" asChild>
-          <Link href={`/student/explore/course-details/${course._id}`}>View Detail</Link>
+          <Link href={`/student/explore/course-details/${course._id}`}>
+            {isFull ? 'Join Waiting List' : 'Enroll Now'}
+          </Link>
         </Button>
       </CardFooter>
     </Card>

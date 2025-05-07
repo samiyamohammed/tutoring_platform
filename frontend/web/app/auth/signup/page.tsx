@@ -38,6 +38,7 @@ export default function SignUpPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
 
   const defaultRole = searchParams.get("role") || "student"
 
@@ -64,7 +65,7 @@ export default function SignUpPage() {
       };
   
       // Simulate API call
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

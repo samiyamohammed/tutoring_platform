@@ -69,6 +69,7 @@ interface UserData {
 }
 
 export default function StudentDashboardPage() {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<UserData | null>(null);
@@ -100,7 +101,7 @@ export default function StudentDashboardPage() {
           throw new Error('No authentication token found');
         }
 
-        const response = await fetch('http://localhost:5000/api/enrollment/mycourses', {
+        const response = await fetch(`${apiUrl}/api/enrollment/mycourses`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
 

@@ -20,6 +20,7 @@ import { useToast } from "@/components/ui/use-toast"
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
   const router = useRouter()
   const { toast } = useToast()
   const [paymentDetails, setPaymentDetails] = useState({
@@ -89,7 +90,7 @@ export default function PaymentSuccessPage() {
       }
 
       console.log("Enrollment Data:", enrollmentData)
-      const response = await fetch("http://localhost:5000/api/enrollment/enroll", {
+      const response = await fetch(`${apiUrl}/api/enrollment/enroll`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

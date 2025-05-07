@@ -13,7 +13,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/use-toast"
-import { useAuth } from "@/lib/auth-provider";
+
+// import { useAuth } from "@/lib/auth-provider";
+// Removed invalid import. Use process.env.API_URL directly in the code.
+
 
 const formSchema = z.object({
   email: z.string().email({
@@ -28,7 +31,7 @@ export default function SignInPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
-
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,7 +47,7 @@ export default function SignInPage() {
     
     try {
         // 1. Make the API call
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch(`${apiUrl}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

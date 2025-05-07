@@ -46,6 +46,8 @@ export default function TutorVerificationPage() {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<Array<File>>([])
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

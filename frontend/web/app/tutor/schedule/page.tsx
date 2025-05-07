@@ -102,6 +102,8 @@ export default function SessionSchedulerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
   const [timeConflict, setTimeConflict] = useState<{
     exists: boolean;
     courseTitle?: string;
@@ -143,7 +145,7 @@ export default function SessionSchedulerPage() {
 
         const token = localStorage.getItem("token") || "";
         const response = await fetch(
-          "http://localhost:5000/api/enrollment/tutor",
+          `${apiUrl}/api/enrollment/tutor`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -179,7 +181,7 @@ export default function SessionSchedulerPage() {
 
         const token = localStorage.getItem("token") || "";
         const response = await fetch(
-          `http://localhost:5000/api/session/tutor`,
+          `${apiUrl}/api/session/tutor`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

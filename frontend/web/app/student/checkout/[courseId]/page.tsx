@@ -104,6 +104,8 @@ export default function CheckoutPage() {
   const userEmail = user.email || "default@example.com";
   const fullName = user.name || "Default User";
   const [firstName, lastName] = fullName.split(' ');
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -115,7 +117,7 @@ export default function CheckoutPage() {
 
         // First fetch course details
         const courseRes = await fetch(
-          `http://localhost:5000/api/course/${courseId}`,
+          `${apiUrl}/api/course/${courseId}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -128,7 +130,7 @@ export default function CheckoutPage() {
         let modulesData: Module[] = [];
         try {
           const modulesRes = await fetch(
-            `http://localhost:5000/api/course/module/${courseId}`,
+            `${apiUrl}/api/course/module/${courseId}`,
             {
               headers: { Authorization: `Bearer ${token}` },
             }

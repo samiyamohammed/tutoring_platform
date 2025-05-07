@@ -107,6 +107,8 @@ export default function CreateCoursePage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState("basic")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -194,7 +196,7 @@ export default function CreateCoursePage() {
       };
       const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : '';
       
-      const response = await fetch('http://localhost:5000/api/course', {
+      const response = await fetch(`${apiUrl}/api/course`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

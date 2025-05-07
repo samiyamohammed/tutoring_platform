@@ -116,6 +116,8 @@ export default function DocumentVerificationPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [tutorData, setTutorData] = useState<TutorData | null>(null)
   const [selectedDoc, setSelectedDoc] = useState<VerificationDocument | null>(null)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   const form = useForm<DocumentVerificationFormValues>({
     resolver: zodResolver(documentVerificationSchema),
@@ -141,7 +143,7 @@ export default function DocumentVerificationPage() {
     const fetchTutorData = async () => {
       try {
         const token = localStorage.getItem("token")
-        const res = await fetch("http://localhost:5000/api/users/profile", {
+        const res = await fetch(`${apiUrl}/api/users/profile`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -230,7 +232,7 @@ export default function DocumentVerificationPage() {
       setIsLoadingDoc(true)
       setSelectedDoc(doc)
       
-      const res = await fetch(`http://localhost:5000${doc.url}`, {
+      const res = await fetch(`${apiUrl}${doc.url}`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`,
         },
@@ -301,7 +303,7 @@ export default function DocumentVerificationPage() {
         throw new Error("User information is missing or invalid.")
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/${user._id}`, {
+      const response = await fetch(`${apiUrl}/api/users/${user._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,

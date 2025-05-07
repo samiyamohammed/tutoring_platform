@@ -108,6 +108,8 @@ export default function TutorDashboardPage() {
   const [enrollmentData, setEnrollmentData] = useState<ChartData[]>([])
   const [performanceData, setPerformanceData] = useState<ChartData[]>([])
   const [earningsData, setEarningsData] = useState<ChartData[]>([])
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -130,9 +132,9 @@ export default function TutorDashboardPage() {
 
         // Make parallel API calls with authentication
         const [coursesRes, enrollmentsRes, sessionsRes] = await Promise.all([
-          fetch('http://localhost:5000/api/course', { headers }),
-          fetch('http://localhost:5000/api/enrollment', { headers }),
-          fetch('http://localhost:5000/api/session', { headers })
+          fetch(`${apiUrl}/api/course`, { headers }),
+          fetch(`${apiUrl}/api/enrollment`, { headers }),
+          fetch(`${apiUrl}/api/session`, { headers })
         ]);
 
         if (!coursesRes.ok || !enrollmentsRes.ok || !sessionsRes.ok) {

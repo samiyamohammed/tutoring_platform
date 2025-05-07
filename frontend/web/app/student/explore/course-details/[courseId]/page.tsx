@@ -103,12 +103,14 @@ export default function CourseDetailsPage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchCourse = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch(`http://localhost:5000/api/course/${courseId}`, {
+        const response = await fetch(`${apiUrl}/api/course/${courseId}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
 

@@ -168,6 +168,8 @@ export default function CourseDetailPage() {
   const { toast } = useToast()
   const [isAddingModule, setIsAddingModule] = useState(false)
   const [newModuleTitle, setNewModuleTitle] = useState("")
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
     useEffect(() => {
           const fetchContent = async () => {
@@ -178,7 +180,7 @@ export default function CourseDetailPage() {
                   console.log('Token:', token)
   
                   const [courseRes] = await Promise.all([
-                      fetch(`http://localhost:5000/api/course/${courseId}`, {
+                      fetch(`${apiUrl}/api/course/${courseId}`, {
                           headers: { 'Authorization': `Bearer ${token}` },
                       })
                   ]);
@@ -212,7 +214,7 @@ export default function CourseDetailPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-      const response = await fetch(`http://localhost:5000/api/course/${course._id}/status`, {
+      const response = await fetch(`${apiUrl}/api/course/${course._id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -244,7 +246,7 @@ export default function CourseDetailPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-      const response = await fetch(`http://localhost:5000/api/course/${course._id}/modules`, {
+      const response = await fetch(`${apiUrl}/api/course/${course._id}/modules`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

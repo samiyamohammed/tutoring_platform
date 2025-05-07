@@ -95,13 +95,15 @@ export default function TutorCoursesPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const { toast } = useToast()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchCourses = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
         console.log(token)
-        const response = await fetch('http://localhost:5000/api/course', {
+        const response = await fetch(`${apiUrl}/api/course`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -147,7 +149,7 @@ export default function TutorCoursesPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
       console.log(token)
-      const response = await fetch(`http://localhost:5000/api/course/${courseId}/status`, {
+      const response = await fetch(`${apiUrl}/api/course/${courseId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

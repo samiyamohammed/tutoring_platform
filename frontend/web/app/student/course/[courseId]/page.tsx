@@ -126,6 +126,9 @@ export default function CourseLearningPage() {
   const [sectionNotes, setSectionNotes] = useState<string>("")
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
+ 
 
   useEffect(() => {
     const fetchData = async () => {
@@ -134,10 +137,10 @@ export default function CourseLearningPage() {
         
         // Fetch course and enrollment data in parallel
         const [courseRes, enrollmentRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/course/${courseId}`, {
+          fetch(`${apiUrl}/api/course/${courseId}`, {
             headers: { 'Authorization': `Bearer ${token}` },
           }),
-          fetch(`http://localhost:5000/api/enrollment/currentenrollment/${courseId}`, {
+          fetch(`${apiUrl}/api/enrollment/currentenrollment/${courseId}`, {
             headers: { 'Authorization': `Bearer ${token}` },
           })
         ])
@@ -181,10 +184,41 @@ export default function CourseLearningPage() {
     fetchData()
   }, [courseId, toast])
 
+
+  // Replace your current useEffect for time tracking with this:
+useEffect(() => {
+  if (!course || !enrollment || enrollment.currentStatus === 'completed') return;
+
+  const currentModule = course.modules[activeModuleIndex];
+  const currentSection = currentModule.sections[activeSectionIndex];
+  
+  // Only track time for incomplete sections
+  if (currentSection && !isSectionCompleted(currentModule._id, currentSection._id)) {
+    const interval = setInterval(() => {
+      updateProgress(currentModule._id, currentSection._id, 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }
+}, [activeModuleIndex, activeSectionIndex, course, enrollment]);
+
+  
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return [
+      hours.toString().padStart(2, '0'),
+      minutes.toString().padStart(2, '0'),
+      secs.toString().padStart(2, '0')
+    ].join(':');
+  };
+
   const updateProgress = async (moduleId: string, sectionId: string, timeSpent: number = 1) => {
     try {
       const token = localStorage.getItem("token") || ''
-      const response = await fetch(`http://localhost:5000/api/enrollment/${enrollment?._id}/progress`, {
+      const response = await fetch(`${apiUrl}/api/enrollment/${enrollment?._id}/progress`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -220,7 +254,7 @@ export default function CourseLearningPage() {
       const currentSection = currentModule.sections[activeSectionIndex];
       
       const response = await fetch(
-        `http://localhost:5000/api/enrollment/${enrollment._id}/complete-section`,
+        `${apiUrl}/api/enrollment/${enrollment._id}/complete-section`,
         {
           method: "PUT",
           headers: {
@@ -280,7 +314,7 @@ export default function CourseLearningPage() {
       const currentSection = currentModule?.sections[activeSectionIndex]
       
       const response = await fetch(
-        `http://localhost:5000/api/enrollment/${enrollment._id}/notes`,
+        `${apiUrl}/api/enrollment/${enrollment._id}/notes`,
         {
           method: "POST",
           headers: {
@@ -340,15 +374,16 @@ export default function CourseLearningPage() {
 
   const handleVideoProgress = () => {
     if (videoRef.current) {
-      const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100
-      setVideoProgress(progress)
+      const progress = (videoRef.current.currentTime / videoRef.current.duration) * 100;
+      setVideoProgress(progress);
       
-      // Auto-save progress every 10 seconds
-      if (videoRef.current.currentTime % 10 < 0.1) {
-        const currentModule = course?.modules[activeModuleIndex]
-        const currentSection = currentModule?.sections[activeSectionIndex]
+      // Track time every second
+      const currentTime = Math.floor(videoRef.current.currentTime);
+      if (currentTime % 1 === 0) { // Update every second
+        const currentModule = course?.modules[activeModuleIndex];
+        const currentSection = currentModule?.sections[activeSectionIndex];
         if (currentModule && currentSection) {
-          updateProgress(currentModule._id, currentSection._id, 10)
+          updateProgress(currentModule._id, currentSection._id, 1); // Track 1 second
         }
       }
     }
@@ -380,7 +415,7 @@ export default function CourseLearningPage() {
       const currentSection = currentModule.sections[activeSectionIndex]
       
       const response = await fetch(
-        `http://localhost:5000/api/enrollment/${enrollment._id}/submit-quiz`,
+        `${apiUrl}/api/enrollment/${enrollment._id}/submit-quiz`,
         {
           method: "POST",
           headers: {
@@ -431,6 +466,7 @@ export default function CourseLearningPage() {
     }
   }
 
+  
   if (loading) {
     return (
       <SidebarProvider>
@@ -547,7 +583,7 @@ export default function CourseLearningPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
-                  <span>{course.estimatedDuration} hours total</span>
+                  <span>{course.estimatedDuration || 1} hours total</span>
                 </div>
               </div>
               
@@ -613,9 +649,11 @@ export default function CourseLearningPage() {
                       </div>
                       {(sectionProgress?.timeSpent ?? 0) > 0 && (
                         <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{sectionProgress ? Math.floor(sectionProgress.timeSpent / 60) : 0} min spent</span>
-                        </div>
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {sectionProgress ? formatTime(sectionProgress.timeSpent) : '00:00:00'} spent
+                        </span>
+                      </div>
                       )}
                     </div>
                   </div>
@@ -713,7 +751,7 @@ export default function CourseLearningPage() {
                             ref={videoRef}
                             controls 
                             className="w-full h-full"
-                            src={`http://localhost:5000${currentSection.videoUrl}`}
+                            src={`${apiUrl}${currentSection.videoUrl}`}
                             onTimeUpdate={handleVideoProgress}
                           />
                         </div>
@@ -755,7 +793,7 @@ export default function CourseLearningPage() {
                       <div className="space-y-4">
                         <div className="h-[600px]">
                           <iframe 
-                            src={`http://localhost:5000${currentSection.pdfUrl}`}
+                            src={`${apiUrl}${currentSection.pdfUrl}`}
                             className="w-full h-full border rounded-md"
                             title={currentSection.title}
                           />

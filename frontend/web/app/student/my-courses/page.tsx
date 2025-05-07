@@ -78,12 +78,14 @@ export default function MyCoursesPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [sessionTypeFilter, setSessionTypeFilter] = useState("all")
   const { toast } = useToast()
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ; 
+
 
   useEffect(() => {
     const fetchEnrollments = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch('http://localhost:5000/api/enrollment/mycourses', {
+        const response = await fetch(`${apiUrl}/api/enrollment/mycourses`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
 
