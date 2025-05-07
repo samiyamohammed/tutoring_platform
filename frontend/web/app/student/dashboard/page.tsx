@@ -12,6 +12,7 @@ import {
   Search,
   Star,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +21,144 @@ import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Progress } from "@/components/ui/progress"
 
+interface Course {
+  _id: string;
+  title: string;
+  description: string;
+  tutor: {
+    name: string;
+    email: string;
+  };
+  category: string;
+  level: string;
+  pricing: {
+    online?: {
+      price: number;
+    };
+    group?: {
+      price: number;
+    };
+    oneOnOne?: {
+      price: number;
+    };
+  };
+}
+
+interface Enrollment {
+  _id: string;
+  course: Course;
+  enrolledSessionType: string;
+  currentStatus: string;
+  progress: {
+    completionPercentage: number;
+    timeSpentTotal: number;
+  };
+  certification: {
+    eligible: boolean;
+    issued: boolean;
+    issuedAt?: string; // Add issuedAt property
+  };
+}
+
+interface UserData {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  // Add other user properties as needed
+}
+
 export default function StudentDashboardPage() {
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [stats, setStats] = useState({
+    enrolledCourses: 0,
+    inProgress: 0,
+    completed: 0,
+    certificates: 0,
+    hoursStudied: 0,
+  });
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+
+    const fetchEnrollments = async () => {
+      try {
+        // Get auth token from localStorage
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:5000/api/enrollment/mycourses', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
+
+        if (!response.ok) throw new Error('Failed to fetch enrollments')
+
+        const data = await response.json()
+        setEnrollments(data)
+
+        // Calculate stats
+        const enrolledCourses = data.enrollments?.length || 0;
+        const inProgress = data.enrollments?.filter((e: Enrollment) => 
+          e.currentStatus === 'enrolled' || e.currentStatus === 'in_progress'
+        ).length || 0;
+        const completed = data.enrollments?.filter((e: Enrollment) => 
+          e.currentStatus === 'completed'
+        ).length || 0;
+        const certificates = data.enrollments?.filter((e: Enrollment) => 
+          e.certification?.issued
+        ).length || 0;
+        const hoursStudied = Math.round((data.enrollments?.reduce((sum: number, e: Enrollment) => 
+          sum + (e.progress?.timeSpentTotal || 0), 0)) / 3600);
+
+        setStats({
+          enrolledCourses,
+          inProgress,
+          completed,
+          certificates,
+          hoursStudied,
+        });
+      } catch (error) {
+        console.error('Error fetching enrollments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEnrollments();
+  }, []);
+
+  const inProgressCourses = enrollments.filter(e => 
+    e.currentStatus === 'enrolled' || e.currentStatus === 'in_progress'
+  );
+
+  // Function to get the latest certificate course title
+  const getLatestCertificateTitle = () => {
+    const certifiedEnrollments = enrollments.filter(e => e.certification?.issued);
+    if (certifiedEnrollments.length === 0) return 'No certificates yet';
+    
+    // Sort by issuedAt if available, or use the first one
+    const latest = certifiedEnrollments.reduce((latest, current) => {
+      const latestDate = new Date(latest.certification.issuedAt || 0).getTime();
+      const currentDate = new Date(current.certification.issuedAt || 0).getTime();
+      return currentDate > latestDate ? current : latest;
+    });
+    
+    return latest.course.title;
+  };
+
   return (
     <SidebarProvider>
       <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
@@ -29,7 +167,9 @@ export default function StudentDashboardPage() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, Jane Doe</p>
+              <p className="text-sm text-muted-foreground">
+                Welcome back, {user?.name || 'Student'}
+              </p>
             </div>
             <Button asChild>
               <Link href="/student/explore">
@@ -46,8 +186,10 @@ export default function StudentDashboardPage() {
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">4</div>
-                  <p className="text-xs text-muted-foreground">2 in progress, 2 completed</p>
+                  <div className="text-2xl font-bold">{stats.enrolledCourses}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.inProgress} in progress, {stats.completed} completed
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -66,8 +208,10 @@ export default function StudentDashboardPage() {
                   <GraduationCap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-muted-foreground">Latest: Web Development Fundamentals</p>
+                  <div className="text-2xl font-bold">{stats.certificates}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.certificates > 0 ? `Latest: ${getLatestCertificateTitle()}` : 'No certificates yet'}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -76,8 +220,8 @@ export default function StudentDashboardPage() {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">42</div>
-                  <p className="text-xs text-muted-foreground">This month: 18 hours</p>
+                  <div className="text-2xl font-bold">{stats.hoursStudied}</div>
+                  <p className="text-xs text-muted-foreground">This month: {Math.round(stats.hoursStudied / 3)} hours</p>
                 </CardContent>
               </Card>
             </div>
@@ -89,73 +233,66 @@ export default function StudentDashboardPage() {
                 <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
               </TabsList>
               <TabsContent value="courses" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {[
-                    {
-                      title: "Advanced JavaScript",
-                      progress: 75,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "John Smith",
-                      nextSession: "Tomorrow, 2:00 PM",
-                    },
-                    {
-                      title: "UI/UX Design Principles",
-                      progress: 45,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "Sarah Johnson",
-                      nextSession: "Friday, 10:00 AM",
-                    },
-                    {
-                      title: "Python for Data Science",
-                      progress: 20,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "Michael Brown",
-                      nextSession: "Monday, 3:00 PM",
-                    },
-                  ].map((course, i) => (
-                    <Card key={i}>
-                      <CardHeader className="p-0">
-                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                          <img
-                            src={course.image || "/placeholder.svg"}
-                            alt={course.title}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="space-y-2">
-                          <CardTitle className="line-clamp-1">{course.title}</CardTitle>
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>Tutor: {course.tutor}</span>
-                            <div className="flex items-center">
-                              <Star className="mr-1 h-4 w-4 fill-primary text-primary" />
-                              <span>4.8</span>
+                {loading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {inProgressCourses.map((enrollment) => (
+                        <Card key={enrollment._id}>
+                          <CardHeader className="p-0">
+                            <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-muted">
+                              <div className="h-full w-full flex items-center justify-center">
+                                <BookOpen className="h-12 w-12 text-muted-foreground" />
+                              </div>
                             </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Progress</span>
-                              <span>{course.progress}%</span>
+                          </CardHeader>
+                          <CardContent className="p-4">
+                            <div className="space-y-2">
+                              <CardTitle className="line-clamp-1">
+                                {enrollment.course.title}
+                              </CardTitle>
+                              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                <span>Tutor: {enrollment.course.tutor.name}</span>
+                                <div className="flex items-center">
+                                  <Star className="mr-1 h-4 w-4 fill-primary text-primary" />
+                                  <span>4.8</span>
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span>Progress</span>
+                                  <span>{enrollment.progress?.completionPercentage || 0}%</span>
+                                </div>
+                                <Progress 
+                                  value={enrollment.progress?.completionPercentage || 0} 
+                                  className="h-2" 
+                                />
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Session type: {enrollment.enrolledSessionType}
+                              </div>
                             </div>
-                            <Progress value={course.progress} className="h-2" />
-                          </div>
-                          <div className="text-sm text-muted-foreground">Next session: {course.nextSession}</div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="p-4 pt-0">
-                        <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/student/my-courses/${i + 1}`}>Continue Learning</Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-                <div className="flex justify-center">
-                  <Button variant="outline" asChild>
-                    <Link href="/student/my-courses">View All Courses</Link>
-                  </Button>
-                </div>
+                          </CardContent>
+                          <CardFooter className="p-4 pt-0">
+                            <Button variant="outline" className="w-full" asChild>
+                              <Link href={`/student/my-courses/${enrollment.course._id}`}>
+                                Continue Learning
+                              </Link>
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                    <div className="flex justify-center">
+                      <Button variant="outline" asChild>
+                        <Link href="/student/my-courses">View All Courses</Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </TabsContent>
               <TabsContent value="progress" className="space-y-4">
                 <Card>

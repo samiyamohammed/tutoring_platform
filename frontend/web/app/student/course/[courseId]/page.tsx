@@ -137,7 +137,7 @@ export default function CourseLearningPage() {
           fetch(`http://localhost:5000/api/course/${courseId}`, {
             headers: { 'Authorization': `Bearer ${token}` },
           }),
-          fetch(`http://localhost:5000/api/enrollment/currentEnrollment/${courseId}`, {
+          fetch(`http://localhost:5000/api/enrollment/currentenrollment/${courseId}`, {
             headers: { 'Authorization': `Bearer ${token}` },
           })
         ])
@@ -211,13 +211,13 @@ export default function CourseLearningPage() {
   }
 
   const markSectionComplete = async () => {
-    if (!course || !enrollment) return
+    if (!course || !enrollment) return;
     
-    setIsMarkingComplete(true)
+    setIsMarkingComplete(true);
     try {
-      const token = localStorage.getItem("token") || ''
-      const currentModule = course.modules[activeModuleIndex]
-      const currentSection = currentModule.sections[activeSectionIndex]
+      const token = localStorage.getItem("token") || '';
+      const currentModule = course.modules[activeModuleIndex];
+      const currentSection = currentModule.sections[activeSectionIndex];
       
       const response = await fetch(
         `http://localhost:5000/api/enrollment/${enrollment._id}/complete-section`,
@@ -230,44 +230,44 @@ export default function CourseLearningPage() {
           body: JSON.stringify({
             moduleId: currentModule._id,
             sectionId: currentSection._id,
-            notes: sectionNotes // Include any notes the student added
+            notes: sectionNotes
           })
         }
-      )
-
+      );
+  
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to mark section complete')
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to mark section complete');
       }
-
-      const updatedEnrollment = await response.json()
-      setEnrollment(updatedEnrollment)
-      setSectionNotes("")
+  
+      const updatedEnrollment = await response.json();
+      setEnrollment(updatedEnrollment);
+      setSectionNotes("");
       
       // Move to next section if not last
-      const isLastSection = activeSectionIndex === currentModule.sections.length - 1
-      const isLastModule = activeModuleIndex === course.modules.length - 1
+      const isLastSection = activeSectionIndex === currentModule.sections.length - 1;
+      const isLastModule = activeModuleIndex === course.modules.length - 1;
       
       if (!isLastSection) {
-        setActiveSectionIndex(activeSectionIndex + 1)
+        setActiveSectionIndex(activeSectionIndex + 1);
       } else if (!isLastModule) {
-        setActiveModuleIndex(activeModuleIndex + 1)
-        setActiveSectionIndex(0)
+        setActiveModuleIndex(activeModuleIndex + 1);
+        setActiveSectionIndex(0);
       }
-
+  
       toast({
         title: "Success",
         description: "Section marked as completed!",
-      })
+      });
     } catch (error) {
-      console.error("Error marking section complete:", error)
+      console.error("Error marking section complete:", error);
       toast({
         variant: "destructive",
         title: "Error",
         description: error instanceof Error ? error.message : "An unknown error occurred",
-      })
+      });
     } finally {
-      setIsMarkingComplete(false)
+      setIsMarkingComplete(false);
     }
   }
 
@@ -280,7 +280,7 @@ export default function CourseLearningPage() {
       const currentSection = currentModule?.sections[activeSectionIndex]
       
       const response = await fetch(
-        `http://localhost:5000/api/enrollment/${enrollment._id}/add-note`,
+        `http://localhost:5000/api/enrollment/${enrollment._id}/notes`,
         {
           method: "POST",
           headers: {
@@ -500,7 +500,7 @@ export default function CourseLearningPage() {
         <StudentSidebar />
         <div className="flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
-            <Button variant="ghost" onClick={() => router.push('/student/courses')}>
+            <Button variant="ghost" onClick={() => router.push('/student/my-courses')}>
               <ChevronLeft className="h-4 w-4 mr-2" />
               Back to My Courses
             </Button>

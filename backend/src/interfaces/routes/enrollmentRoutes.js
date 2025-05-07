@@ -6,9 +6,9 @@ const router = express.Router();
 router.get("/",  enrollmentController.getAllEnrollments);  // Student enrolls in a course
 router.post("/enroll",  enrollmentController.enrollStudent);  // Student enrolls in a course
 router.get("/mycourses",  enrollmentController.getEnrollments);  // Get all enrollments for a student
-router.put("/:id",  enrollmentController.updateEnrollment);  // Update enrollment status
+// router.put("/:id",  enrollmentController.updateEnrollment);  // Update enrollment status
 router.get("/currentenrollment/:courseId",  enrollmentController.getCurrentEnrollment);  // Get all enrollments for a student
-router.put("/status",  enrollmentController.updateEnrollmentStatus);  // Update enrollment status
+// router.put("/status",  enrollmentController.updateEnrollmentStatus);  // Update enrollment status
 // Update progress
 router.put('/:enrollmentId/progress', enrollmentController.updateProgress);
 
