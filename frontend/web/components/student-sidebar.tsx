@@ -125,8 +125,8 @@ export function StudentSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/student/settings")}>
-                  <Link href="/student/settings">
+                <SidebarMenuButton asChild isActive={isActive("/student/setting")}>
+                  <Link href="/student/setting">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </Link>

@@ -207,53 +207,6 @@ useEffect(() => {
 
               <TabsContent value="progress" className="space-y-4"> 
                 <LearningProgress enrollments={enrollments} />
-                {/* <Card>
-                  <CardHeader>
-                    <CardTitle>Learning Progress</CardTitle>
-                    <CardDescription>Track your progress across all courses</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pl-2">
-                    <div className="h-[300px] w-full flex items-center justify-center bg-muted/20 rounded-md">
-                      <LineChart className="h-16 w-16 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Assessment Scores</CardTitle>
-                      <CardDescription>Your performance in course assessments</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pl-2">
-                      <div className="h-[200px] w-full flex items-center justify-center bg-muted/20 rounded-md">
-                        <BarChart3 className="h-16 w-16 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Learning Goals</CardTitle>
-                      <CardDescription>Track your progress towards your learning goals</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {[
-                          { goal: "Complete JavaScript Course", progress: 75 },
-                          { goal: "Finish 5 Programming Projects", progress: 40 },
-                          { goal: "Study 50 Hours This Month", progress: 60 },
-                        ].map((goal, i) => (
-                          <div key={i} className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{goal.goal}</span>
-                              <span>{goal.progress}%</span>
-                            </div>
-                            <Progress value={goal.progress} className="h-2" />
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div> */}
               </TabsContent>
 
                 {/* schedule */}
