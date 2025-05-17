@@ -3,7 +3,21 @@ import Enrollment from "../../domain/models/Enrollment.js";
 import Course from "../../domain/models/Course.js";
 import mongoose from 'mongoose';
 
+class NotFoundError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'NotFoundError';
+    this.statusCode = 404;
+  }
+}
+
 class EnrollmentController {
+  constructor() {
+    // Bind methods to maintain 'this' context
+    this.calculateCourseProgress = this.calculateCourseProgress.bind(this);
+    this.markSectionComplete = this.markSectionComplete.bind(this);
+    this.updateProgress = this.updateProgress.bind(this);
+  }
   async enrollStudent(req, res) {
     try {
       req.body.student = req.user._id;
@@ -82,163 +96,187 @@ class EnrollmentController {
   //   }
   // }
 
-  async updateProgress (req, res) {
-    const { moduleId, sectionId, timeSpent = 1 } = req.body;
-    
-    // Find the enrollment
-    const enrollment = await Enrollment.findOne({
-      _id: req.params.enrollmentId,
-      student: req.user._id
-    }).populate('course', 'modules');
-  
-    if (!enrollment) {
-      throw new NotFoundError('Enrollment not found');
+  async updateProgress(req, res) {
+    try {
+      const { moduleId, sectionId, timeSpent = 1 } = req.body;
+      
+      const enrollment = await Enrollment.findOne({
+        _id: req.params.enrollmentId,
+        student: req.user._id
+      }).populate('course', 'modules');
+
+      if (!enrollment) {
+        throw new NotFoundError('Enrollment not found');
+      }
+
+      // Find the module and section in the course
+      const course = enrollment.course;
+      const module = course.modules.find(m => m._id.toString() === moduleId);
+      if (!module) {
+        throw new NotFoundError('Module not found in course');
+      }
+
+      const section = module.sections.find(s => s._id.toString() === sectionId);
+      if (!section) {
+        throw new NotFoundError('Section not found in module');
+      }
+
+      // Update module progress
+      let moduleProgress = enrollment.progress.modules.find(m => m.moduleId === moduleId);
+      if (!moduleProgress) {
+        moduleProgress = {
+          moduleId,
+          status: 'started',
+          startedAt: new Date(),
+          timeSpent: 0,
+          sections: []
+        };
+        enrollment.progress.modules.push(moduleProgress);
+      }
+
+      // Update section progress
+      let sectionProgress = moduleProgress.sections.find(s => s.sectionId === sectionId);
+      if (!sectionProgress) {
+        sectionProgress = {
+          sectionId,
+          status: 'in_progress',
+          startedAt: new Date(),
+          timeSpent: 0
+        };
+        moduleProgress.sections.push(sectionProgress);
+      }
+
+      // Update timestamps and time spent
+      sectionProgress.lastAccessed = new Date();
+      sectionProgress.timeSpent += timeSpent;
+      moduleProgress.lastAccessed = new Date();
+      moduleProgress.timeSpent += timeSpent;
+      enrollment.progress.lastActivity = new Date();
+      enrollment.progress.timeSpentTotal += timeSpent;
+      enrollment.progress.currentModule = moduleId;
+      enrollment.progress.currentSection = sectionId;
+
+      // Update module status if needed
+      if (moduleProgress.status === 'not_started') {
+        moduleProgress.status = 'started';
+      }
+
+      // Update enrollment status if needed
+      if (enrollment.currentStatus === 'enrolled') {
+        enrollment.currentStatus = 'in_progress';
+      }
+
+      // Calculate completion percentage
+      await this.calculateCourseProgress(enrollment);
+
+      await enrollment.save();
+      res.json(enrollment);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: error.message });
+      }
     }
-  
-    // Find the module and section in the course
-    const course = enrollment.course;
-    const module = course.modules.find(m => m._id.toString() === moduleId);
-    if (!module) {
-      throw new NotFoundError('Module not found in course');
-    }
-  
-    const section = module.sections.find(s => s._id.toString() === sectionId);
-    if (!section) {
-      throw new NotFoundError('Section not found in module');
-    }
-  
-    // Update module progress
-    let moduleProgress = enrollment.progress.modules.find(m => m.moduleId === moduleId);
-    if (!moduleProgress) {
-      moduleProgress = {
-        moduleId,
-        status: 'started',
-        startedAt: new Date(),
-        timeSpent: 0,
-        sections: []
-      };
-      enrollment.progress.modules.push(moduleProgress);
-    }
-  
-    // Update section progress
-    let sectionProgress = moduleProgress.sections.find(s => s.sectionId === sectionId);
-    if (!sectionProgress) {
-      sectionProgress = {
-        sectionId,
-        status: 'in_progress',
-        startedAt: new Date(),
-        timeSpent: 0
-      };
-      moduleProgress.sections.push(sectionProgress);
-    }
-  
-    // Update timestamps and time spent
-    sectionProgress.lastAccessed = new Date();
-    sectionProgress.timeSpent += timeSpent;
-    moduleProgress.lastAccessed = new Date();
-    moduleProgress.timeSpent += timeSpent;
-    enrollment.progress.lastActivity = new Date();
-    enrollment.progress.timeSpentTotal += timeSpent;
-    enrollment.progress.currentModule = moduleId;
-    enrollment.progress.currentSection = sectionId;
-  
-    // Update module status if needed
-    if (moduleProgress.status === 'not_started') {
-      moduleProgress.status = 'started';
-    }
-  
-    // Update enrollment status if needed
-    if (enrollment.currentStatus === 'enrolled') {
-      enrollment.currentStatus = 'in_progress';
-    }
-  
-    // Calculate completion percentage
-    const totalSections = course.modules.reduce((acc, mod) => acc + mod.sections.length, 0);
-    const completedSections = enrollment.progress.modules.reduce((acc, mod) => {
-      return acc + mod.sections.filter(s => s.status === 'completed').length;
-    }, 0);
-    
-    enrollment.progress.completionPercentage = Math.round((completedSections / totalSections) * 100);
-  
-    // Check if course is completed
-    if (enrollment.progress.completionPercentage === 100) {
-      enrollment.currentStatus = 'completed';
-      enrollment.certification = {
-        eligible: true,
-        issued: false
-      };
-    }
-  
-    await enrollment.save();
-    res.json(enrollment);
-  };
+  }
   
   // Mark a section as complete
-  async markSectionComplete (req, res)  {
-    const { moduleId, sectionId, notes } = req.body;
-    
-    const enrollment = await Enrollment.findOne({
-      _id: req.params.enrollmentId,
-      student: req.user._id
-    }).populate('course', 'modules');
-  
-    if (!enrollment) {
-      throw new NotFoundError('Enrollment not found');
+  async markSectionComplete(req, res) {
+    try {
+      const { moduleId, sectionId, notes } = req.body;
+      
+      const enrollment = await Enrollment.findOne({
+        _id: req.params.enrollmentId,
+        student: req.user._id
+      }).populate('course', 'modules');
+
+      if (!enrollment) {
+        throw new NotFoundError('Enrollment not found');
+      }
+
+      // Find the module progress or create if doesn't exist
+      let moduleProgress = enrollment.progress.modules.find(m => m.moduleId === moduleId);
+      if (!moduleProgress) {
+        moduleProgress = {
+          moduleId,
+          status: 'started',
+          startedAt: new Date(),
+          timeSpent: 0,
+          sections: []
+        };
+        enrollment.progress.modules.push(moduleProgress);
+      }
+
+      // Find the section progress or create if doesn't exist
+      let sectionProgress = moduleProgress.sections.find(s => s.sectionId === sectionId);
+      if (!sectionProgress) {
+        sectionProgress = {
+          sectionId,
+          status: 'in_progress',
+          startedAt: new Date(),
+          timeSpent: 0
+        };
+        moduleProgress.sections.push(sectionProgress);
+      }
+
+      // Update section status
+      sectionProgress.status = 'completed';
+      sectionProgress.completedAt = new Date();
+
+      // Add note if provided
+      if (notes) {
+        sectionProgress.notes = sectionProgress.notes || [];
+        sectionProgress.notes.push({
+          content: notes,
+          createdAt: new Date()
+        });
+      }
+
+      // Update module status if all sections are completed
+      const allSectionsCompleted = moduleProgress.sections.every(s => s.status === 'completed');
+      if (allSectionsCompleted) {
+        moduleProgress.status = 'completed';
+        moduleProgress.completedAt = new Date();
+      }
+
+      // Recalculate overall progress
+      await this.calculateCourseProgress(enrollment);
+
+      await enrollment.save();
+      res.json(enrollment);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ message: error.message });
+      } else {
+        res.status(500).json({ message: error.message });
+      }
     }
-  
-    // Find the module progress
-    const moduleProgress = enrollment.progress.modules.find(m => m.moduleId === moduleId);
-    if (!moduleProgress) {
-      throw new NotFoundError('Module progress not found');
-    }
-  
-    // Find the section progress
-    const sectionProgress = moduleProgress.sections.find(s => s.sectionId === sectionId);
-    if (!sectionProgress) {
-      throw new NotFoundError('Section progress not found');
-    }
-  
-    // Update section status
-    sectionProgress.status = 'completed';
-    sectionProgress.completedAt = new Date();
-  
-    // Add note if provided
-    if (notes) {
-      sectionProgress.notes = sectionProgress.notes || [];
-      sectionProgress.notes.push({
-        content: notes,
-        createdAt: new Date()
-      });
-    }
-  
-    // Check if module is now completed
-    const allSectionsCompleted = moduleProgress.sections.every(s => s.status === 'completed');
-    if (allSectionsCompleted) {
-      moduleProgress.status = 'completed';
-      moduleProgress.completedAt = new Date();
-    }
-  
-    // Calculate new completion percentage
+  }
+
+  async calculateCourseProgress(enrollment) {
     const course = enrollment.course;
+    
+    // Calculate based on completed sections
     const totalSections = course.modules.reduce((acc, mod) => acc + mod.sections.length, 0);
     const completedSections = enrollment.progress.modules.reduce((acc, mod) => {
       return acc + mod.sections.filter(s => s.status === 'completed').length;
     }, 0);
     
     enrollment.progress.completionPercentage = Math.round((completedSections / totalSections) * 100);
-  
-    // Check if course is completed
+
+    // Update enrollment status if course is completed
     if (enrollment.progress.completionPercentage === 100) {
       enrollment.currentStatus = 'completed';
-      enrollment.certification = {
-        eligible: true,
-        issued: false
-      };
+      if (!enrollment.certification) {
+        enrollment.certification = {
+          eligible: true,
+          issued: false
+        };
+      }
+    } else if (enrollment.currentStatus === 'enrolled') {
+      enrollment.currentStatus = 'in_progress';
     }
-  
-    await enrollment.save();
-    res.json(enrollment);
-  };
+  }
   
   // Add a note to a section
   async addNoteToSection (req, res) {

@@ -126,6 +126,7 @@ export default function CourseLearningPage() {
   const [sectionNotes, setSectionNotes] = useState<string>("")
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
+  const [timeSpentInterval, setTimeSpentInterval] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -181,6 +182,34 @@ export default function CourseLearningPage() {
     fetchData()
   }, [courseId, toast])
 
+  // Start tracking time spent when component mounts
+  useEffect(() => {
+    if (!course || !enrollment) return
+    
+    const interval = setInterval(() => {
+      trackTimeSpent()
+    }, 30000) // Track every 30 seconds
+
+    setTimeSpentInterval(interval)
+
+    return () => {
+      if (timeSpentInterval) clearInterval(timeSpentInterval)
+    }
+  }, [course, enrollment])
+
+  const trackTimeSpent = async () => {
+    if (!course || !enrollment) return
+    
+    try {
+      const currentModule = course.modules[activeModuleIndex]
+      const currentSection = currentModule.sections[activeSectionIndex]
+      
+      await updateProgress(currentModule._id, currentSection._id, 30) // 30 seconds
+    } catch (error) {
+      console.error("Error tracking time:", error)
+    }
+  }
+
   const updateProgress = async (moduleId: string, sectionId: string, timeSpent: number = 1) => {
     try {
       const token = localStorage.getItem("token") || ''
@@ -230,7 +259,7 @@ export default function CourseLearningPage() {
           body: JSON.stringify({
             moduleId: currentModule._id,
             sectionId: currentSection._id,
-            notes: sectionNotes // Include any notes the student added
+            notes: sectionNotes
           })
         }
       )
@@ -409,6 +438,15 @@ export default function CourseLearningPage() {
         title: "Success",
         description: "Quiz submitted successfully!",
       })
+
+      // Automatically mark as complete if passed
+      const assessment = updatedEnrollment.progress.assessments?.find(
+        (a: any) => a.sectionId === currentSection._id && a.assessmentType === 'quiz'
+      )
+      
+      if (assessment?.passed) {
+        await markSectionComplete()
+      }
     } catch (error) {
       console.error("Error submitting quiz:", error)
       toast({
@@ -822,10 +860,7 @@ export default function CourseLearningPage() {
                           ))}
                         </div>
                         <Button 
-                          onClick={() => {
-                            submitQuiz()
-                            markSectionComplete()
-                          }}
+                          onClick={submitQuiz}
                           disabled={Object.keys(quizAnswers).length === 0 || isMarkingComplete}
                         >
                           {isMarkingComplete ? "Submitting..." : "Submit Quiz"}

@@ -94,6 +94,15 @@ interface Course {
   updatedAt: string
 }
 
+interface Enrollment {
+  _id: string
+  course: string
+  currentStatus: string
+  progress: {
+    completionPercentage: number
+  }
+}
+
 export default function CourseDetailsPage() {
   const params = useParams()
   const router = useRouter()
@@ -101,33 +110,46 @@ export default function CourseDetailsPage() {
   const courseId = params.courseId as string
 
   const [course, setCourse] = useState<Course | null>(null)
+  const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    const fetchCourse = async () => {
+    const fetchData = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch(`http://localhost:5000/api/course/${courseId}`, {
+        
+        // Fetch course details
+        const courseResponse = await fetch(`http://localhost:5000/api/course/${courseId}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
 
-        if (!response.ok) throw new Error('Failed to fetch course details')
+        if (!courseResponse.ok) throw new Error('Failed to fetch course details')
+        const courseData = await courseResponse.json()
+        setCourse(courseData)
 
-        const data = await response.json()
-        setCourse(data)
-        
         // Initialize expanded state for modules
         const initialExpandedState: Record<string, boolean> = {}
-        data.modules.forEach((module: Module) => {
+        courseData.modules.forEach((module: Module) => {
           initialExpandedState[module._id] = false
         })
         setExpandedModules(initialExpandedState)
+
+        // Check if user is enrolled in this course
+        const enrollmentResponse = await fetch('http://localhost:5000/api/enrollment/mycourses', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        })
+
+        if (enrollmentResponse.ok) {
+          const enrollments = await enrollmentResponse.json()
+          const userEnrollment = enrollments.find((e: Enrollment) => e.course === courseId)
+          setEnrollment(userEnrollment || null)
+        }
       } catch (error) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch course details",
+          description: error instanceof Error ? error.message : "Failed to fetch data",
         })
         router.push("/student/explore")
       } finally {
@@ -135,7 +157,7 @@ export default function CourseDetailsPage() {
       }
     }
 
-    fetchCourse()
+    fetchData()
   }, [courseId, router, toast])
 
   const toggleModule = (moduleId: string) => {
@@ -243,11 +265,19 @@ export default function CourseDetailsPage() {
                 <p className="text-sm text-muted-foreground">{course.title}</p>
               </div>
             </div>
-            <Button asChild>
-              <Link href={`/student/courses/${course._id}/checkout`}>
-                Enroll Now
-              </Link>
-            </Button>
+            {enrollment ? (
+              <Button asChild>
+                <Link href={`/student/my-courses/${course._id}`}>
+                  {enrollment.currentStatus === 'completed' ? 'View Course' : 'Continue Learning'}
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild>
+                <Link href={`/student/courses/${course._id}/checkout`}>
+                  Enroll Now
+                </Link>
+              </Button>
+            )}
           </div>
 
           <div className="flex-1 p-8 pt-6">
@@ -257,6 +287,17 @@ export default function CourseDetailsPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle>About This Course</CardTitle>
+                      {enrollment && (
+                        <div className="flex items-center gap-2">
+                          <Progress 
+                            value={enrollment.progress.completionPercentage} 
+                            className="h-2 w-full" 
+                          />
+                          <span className="text-sm text-muted-foreground">
+                            {enrollment.progress.completionPercentage}% complete
+                          </span>
+                        </div>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
@@ -421,11 +462,19 @@ export default function CourseDetailsPage() {
                         </div>
                       </div>
 
-                      <Button className="w-full" asChild>
-                        <Link href={`/student/checkout/${course._id}`}>
-                          Enroll Now
-                        </Link>
-                      </Button>
+                      {enrollment ? (
+                        <Button className="w-full" asChild>
+                          <Link href={`/student/my-courses/${course._id}`}>
+                            {enrollment.currentStatus === 'completed' ? 'View Course' : 'Continue Learning'}
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button className="w-full" asChild>
+                          <Link href={`/student/courses/${course._id}/checkout`}>
+                            Enroll Now
+                          </Link>
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>

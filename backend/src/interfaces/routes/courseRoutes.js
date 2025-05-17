@@ -52,7 +52,6 @@ router.post('/:courseId/modules',
 // Other routes remain the same
 router.get('/:courseId/modules', courseController.getModules);
 router.get('/:courseId/modules/:moduleId', courseController.getModuleById);
-
 router.put('/:courseId/modules/:moduleId',
   upload.any(),
   async (req, res, next) => {
@@ -88,26 +87,6 @@ router.delete('/:courseId/modules/:moduleId', courseController.deleteModule);
 router.put("/:id", authorize(['admin', 'tutor']), courseController.update);
 router.delete("/:id", authorize(['admin', 'tutor']), courseController.delete);
 router.post("/", authorize(['admin', 'tutor']), courseController.create);
-
-// File download route
-router.get('/files/:id', async (req, res) => {
-  try {
-    const fileId = new mongoose.Types.ObjectId(req.params.id);
-    const file = await gfs.find({ _id: fileId }).toArray();
-    
-    if (!file || file.length === 0) {
-      return res.status(404).json({ error: 'File not found' });
-    }
-
-    res.set('Content-Type', file[0].contentType || 'application/octet-stream');
-    res.set('Content-Disposition', `inline; filename="${file[0].filename}"`);
-    
-    const downloadStream = gfs.openDownloadStream(fileId);
-    downloadStream.pipe(res);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.use("/module", moduleRoutes);
 
