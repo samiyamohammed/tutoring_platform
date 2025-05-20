@@ -45,6 +45,12 @@ class EnrollmentService {
     return await EnrollmentRepository.findAll();
   }
 
+  async getTutorEnrollments(tutorId) {
+    const enrollments = await EnrollmentRepository.findByTutorId(tutorId);
+    if (!enrollments) throw new Error('No enrollments found for this tutor');
+    return enrollments;
+  }
+
   async updateProgress(enrollmentId, studentId, { moduleId, sectionId, timeSpent = 1 }) {
     const enrollment = await this._verifyEnrollmentOwnership(enrollmentId, studentId);
   

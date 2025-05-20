@@ -116,7 +116,7 @@ export function TutorSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/tutor/schedule")}>
-                  <Link href="/tutor/schedule">
+                  <Link href="/tutor/session">
                     <Calendar className="h-4 w-4" />
                     <span>Schedule</span>
                   </Link>

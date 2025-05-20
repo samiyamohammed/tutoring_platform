@@ -277,6 +277,17 @@ class EnrollmentController {
       enrollment.currentStatus = 'in_progress';
     }
   }
+
+  async getTutorEnrollments(req, res) {
+    try {
+      const tutorId = req.user._id;
+      console.log('Tutor ID:', tutorId);
+      const enrollments = await EnrollmentService.getTutorEnrollments(tutorId);
+      res.status(200).json(enrollments);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
   
   // Add a note to a section
   async addNoteToSection (req, res) {

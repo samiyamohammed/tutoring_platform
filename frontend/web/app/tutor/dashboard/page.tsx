@@ -161,7 +161,7 @@ export default function TutorDashboardPage() {
 
         // Filter enrollments where the course tutor matches the current user
         const tutorEnrollments = enrollmentsData.filter(
-          (e: Enrollment) => e.course?.tutor?._id === tutorId
+          (e: Enrollment) => e.course?.tutor === tutorId
         )
         setEnrollments(tutorEnrollments)
 
@@ -169,7 +169,7 @@ export default function TutorDashboardPage() {
         const courseIds = [...new Set(tutorEnrollments.map((e: Enrollment) => e.course._id))]
 
         // Fetch tutor's courses
-        const coursesRes = await fetch(`http://localhost:5000/api/course?tutor=${tutorId}`, { headers })
+        const coursesRes = await fetch(`http://localhost:5000/api/course/tutor`, { headers })
         if (!coursesRes.ok) throw new Error('Failed to fetch courses')
         const coursesData = await coursesRes.json()
         setCourses(coursesData)
@@ -519,7 +519,7 @@ export default function TutorDashboardPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span>ETB</span>
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">{formatCurrency(stats.totalEarnings)}</div>

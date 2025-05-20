@@ -97,35 +97,50 @@ export default function TutorCoursesPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        console.log(token)
-        const response = await fetch('http://localhost:5000/api/course', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        })
+  const fetchCourses = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : '';
+      const user = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem("user") || '{}') : {};
+      
+      console.log('Token:', token);
+      console.log('User ID:', user.id);
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch courses')
-        }
-
-        const data = await response.json()
-        setCourses(data)
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch courses",
-        })
-      } finally {
-        setLoading(false)
+      if (!user.id) {
+        throw new Error('User not authenticated');
       }
-    }
 
-    fetchCourses()
-  }, [toast])
+      const response = await fetch('http://localhost:5000/api/course', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch courses');
+      }
+
+      const data = await response.json();
+      
+      // Filter courses where tutor matches the logged-in user's ID
+      const tutorCourses = data.filter((course: any) => 
+        course.tutor && course.tutor === user.id
+      );
+
+      console.log('Filtered courses:', tutorCourses);
+      setCourses(tutorCourses);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to fetch courses",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchCourses();
+}, [toast]);
 
   // Filter courses based on search query and filters
   const filteredCourses = courses.filter((course) => {

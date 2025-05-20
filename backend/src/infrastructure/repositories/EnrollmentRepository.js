@@ -1,4 +1,7 @@
 import Enrollment from '../../domain/models/Enrollment.js';
+import Course from '../../domain/models/Course.js';
+import mongoose from 'mongoose';
+const { Types } = mongoose;
 
 class EnrollmentRepository {
     async create(enrollmentData) {
@@ -19,6 +22,33 @@ class EnrollmentRepository {
 
     async findByStudentAndCourseId(studentId, courseId) {
         return await Enrollment.findOne({ student: studentId, course: courseId }).populate('course student');
+    }
+
+    async findByTutorId(tutorId) {
+        try {
+            // 1. First find all courses by this tutor
+            const courses = await Course.find({ tutor: tutorId }).select('_id');
+            console.log('Courses found for tutor:', courses);
+
+            // 2. Then find enrollments for these courses
+            const enrollments = await Enrollment.find({
+                course: { $in: courses.map(c => c._id) }
+            })
+                .populate('student', 'name email')
+                .populate({
+                    path: 'course',
+                    select: 'title tutor',
+                    populate: {
+                        path: 'tutor',
+                        select: 'name email'
+                    }
+                });
+
+            return enrollments;
+        } catch (error) {
+            console.error('Error finding enrollments by tutor:', error);
+            throw error;
+        }
     }
 
     async update(id, updateData) {

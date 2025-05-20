@@ -33,6 +33,16 @@ class CourseController {
     }
   }
 
+  async getTutorCourses(req, res) { 
+    try {
+      const tutorId = req.user._id;
+      const courses = await CourseService.getTutorCourses(tutorId);
+      res.status(200).json(courses);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async update(req, res) {
     try {
       const course = await CourseService.updateCourse(req.params.id, req.user._id, req.body);

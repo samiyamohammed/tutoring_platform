@@ -9,6 +9,7 @@ const router = express.Router();
 
 // Course routes
 router.get("/", courseController.getCourses);
+router.get("/tutor", courseController.getTutorCourses);
 router.get("/:id", courseController.getCourseById);
 
 // Updated module creation with proper file handling

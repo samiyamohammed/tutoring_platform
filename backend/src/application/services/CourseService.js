@@ -13,6 +13,12 @@ class CourseService {
         return await CourseRepository.findById(id);
     }
 
+    async getTutorCourses(tutorId) {
+        const courses = await CourseRepository.findByTutorId(tutorId);
+        if (!courses) throw new Error('No courses found for this tutor');
+        return courses;
+    }
+
     async updateCourse(id, userId, updateData) {
         const course = await CourseRepository.findById(id);
         console.log('Course Tutor ID:', course.tutor._id.toString());

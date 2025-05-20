@@ -140,7 +140,7 @@ export default function TutorStudentsPage() {
         const tutorId = JSON.parse(localStorage.getItem('user') || '{}')._id
         // Fetch all enrollments with populated student and course data
         const enrollmentsRes = await fetch(
-          `http://localhost:5000/api/enrollment`,
+          `http://localhost:5000/api/enrollment/tutor`,
           { headers }
         )
         if (!enrollmentsRes.ok) throw new Error('Failed to fetch enrollments')

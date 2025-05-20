@@ -14,7 +14,7 @@ router.get("/:id", authorize(['admin']), (req, res) => userController.getUserByI
 router.get("/tutors",authorize(['admin']), (req, res) => userController.getAllTutors(req, res));
 router.get("/students",authorize(['admin']), (req, res) => userController.getAllStudents(req, res));
 router.get("/Admin",authorize(['admin']), (req, res) => userController.getAllStudents(req, res));
-router.get("/",authorize(['admin']), (req, res) => userController.getAllUsers(req, res));
+router.get("/", (req, res) => userController.getAllUsers(req, res));
 router.put("/:id", upload.array('files'), async (req, res, next) => {
   try {
     if (!req.files || req.files.length === 0) {

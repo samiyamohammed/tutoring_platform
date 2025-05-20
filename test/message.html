@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            width: 300px;
+            background-color: #2c3e50;
+            color: white;
+            overflow-y: auto;
+        }
+        
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: white;
+        }
+        
+        .chat-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages-inner {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            min-height: min-content;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            transition: opacity 0.3s ease;
+        }
+        
+        .message.sending {
+            opacity: 0.7;
+        }
+        
+        .received {
+            background-color: #e5e5ea;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        
+        .sent {
+            background-color: #007aff;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .message-sender {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .message-time {
+            font-size: 0.7em;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 5px;
+        }
+        
+        .message-status {
+            font-size: 0.6em;
+            margin-top: 2px;
+            text-align: right;
+            font-style: italic;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background-color: white;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+            font-size: 1em;
+        }
+        
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        
+        .chat-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .chat-item {
+            padding: 15px;
+            border-bottom: 1px solid #34495e;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+        
+        .chat-item:hover {
+            background-color: #34495e;
+        }
+        
+        .chat-item.active {
+            background-color: #3498db;
+        }
+        
+        .chat-item-name {
+            font-weight: bold;
+        }
+        
+        .chat-item-last {
+            font-size: 0.8em;
+            opacity: 0.8;
+            margin-top: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .chat-item-time {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 0.7em;
+            opacity: 0.7;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .login-box {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            width: 400px;
+            text-align: center;
+        }
+        
+        .login-box h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .login-box button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .unread-count {
+            background-color: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        
+        .typing-indicator {
+            font-style: italic;
+            color: #666;
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        #typing-indicators {
+            min-height: 20px;
+        }
+        
+        .typing-indicator-bubble {
+            font-size: 0.8em;
+            color: #666;
+            padding: 2px 8px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        
+        .message-actions {
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            display: none;
+        }
+        
+        .message:hover .message-actions {
+            display: block;
+        }
+        
+        .message-actions button {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.8em;
+            opacity: 0.7;
+        }
+        
+        .message-actions button:hover {
+            opacity: 1;
+        }
+        
+        .reaction {
+            font-size: 0.8em;
+            margin-right: 5px;
+            cursor: pointer;
+        }
+        
+        .reaction:hover {
+            transform: scale(1.2);
+        }
+        
+        .attachment {
+            display: block;
+            margin-top: 5px;
+            color: inherit;
+            text-decoration: none;
+        }
+        
+        .attachment:hover {
+            text-decoration: underline;
+        }
+        
+        /* Connection status */
+        #connection-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            display: none;
+            font-size: 0.8em;
+            color: #333;
+            z-index: 1000;
+        }
+        
+        #status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-container" class="login-container">
+        <div class="login-box">
+            <h2>Login to Chat</h2>
+            <input type="text" id="username" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="login-btn">Login</button>
+            <p>Don't have an account? <a href="#" id="register-link">Register</a></p>
+        </div>
+    </div>
+
+    <div id="chat-container" class="container" style="display: none;">
+        <div class="sidebar">
+            <div style="padding: 15px; border-bottom: 1px solid #34495e;">
+                <h3 style="margin: 0;">Chats</h3>
+                <button id="new-group-btn" style="margin-top: 10px; padding: 5px 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">New Group</button>
+            </div>
+            <ul id="chat-list" class="chat-list"></ul>
+        </div>
+        
+        <div class="chat-area">
+            <div id="chat-header" class="chat-header">
+                Select a chat to start messaging
+            </div>
+            
+            <div id="messages" class="messages">
+                <div class="messages-inner"></div>
+                <div id="typing-indicators"></div>
+            </div>
+            
+            <div class="chat-input">
+                <input id="message-input" type="text" placeholder="Type a message..." disabled>
+                <button id="send-btn" disabled>Send</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group creation modal (hidden by default) -->
+    <div id="group-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 400px;">
+            <h2>Create New Group</h2>
+            <input type="text" id="group-name" placeholder="Group name" style="width: 100%; padding: 10px; margin-bottom: 10px;">
+            <div id="user-list" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; padding: 10px;"></div>
+            <button id="create-group-btn" style="padding: 10px 15px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Create Group</button>
+            <button id="cancel-group-btn" style="padding: 10px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Connection status indicator -->
+    <div id="connection-status">
+        <span id="status-indicator"></span>
+        <span id="status-text">Connecting...</span>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Global variables
+        let currentUser = null;
+        let currentChat = null;
+        let socket = null;
+        let token = null;
+        let allUsers = [];
+        let tempMessages = {};
+        let isConnected = false;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000; // 3 seconds
+        const typingUsers = {};
+        const typingTimeout = 3000; // 3 seconds
+
+        // DOM elements
+        const loginContainer = document.getElementById('login-container');
+        const chatContainer = document.getElementById('chat-container');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const registerLink = document.getElementById('register-link');
+        const chatList = document.getElementById('chat-list');
+        const chatHeader = document.getElementById('chat-header');
+        const messagesContainer = document.getElementById('messages');
+        const messagesInner = messagesContainer.querySelector('.messages-inner');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const newGroupBtn = document.getElementById('new-group-btn');
+        const groupModal = document.getElementById('group-modal');
+        const groupNameInput = document.getElementById('group-name');
+        const userList = document.getElementById('user-list');
+        const createGroupBtn = document.getElementById('create-group-btn');
+        const cancelGroupBtn = document.getElementById('cancel-group-btn');
+        const typingIndicators = document.getElementById('typing-indicators');
+
+        // Event listeners
+        loginBtn.addEventListener('click', login);
+        registerLink.addEventListener('click', register);
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        newGroupBtn.addEventListener('click', showGroupModal);
+        createGroupBtn.addEventListener('click', createGroup);
+        cancelGroupBtn.addEventListener('click', hideGroupModal);
+
+        // Typing indicators
+        messageInput.addEventListener('input', handleTyping);
+        const stopTypingDebounce = debounce(stopTyping, 1000);
+        messageInput.addEventListener('input', stopTypingDebounce);
+
+        // Functions
+        async function login() {
+            const email = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    token = data.token;
+                    currentUser = {
+                        _id: data.user.id,
+                        email: data.user.email,
+                        name: data.user.name,
+                        role: data.user.role
+                    };
+
+                    console.log('User logged in:', token, currentUser);
+                    
+                    // Hide login, show chat
+                    loginContainer.style.display = 'none';
+                    chatContainer.style.display = 'flex';
+                    
+                    // Initialize socket connection
+                    initializeSocket();
+                    
+                    // Load user chats and users
+                    loadChats();
+                    loadUsers();
+                } else {
+                    alert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('An error occurred during login');
+            }
+        }
+        
+        function register() {
+            const email = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+            
+            if (!email || !password) {
+                alert('Please enter both email and password');
+                return;
+            }
+            
+            fetch('http://localhost:5000/api/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: email.split('@')[0],
+                    email: email,
+                    password: password,
+                    role: 'student'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.token) {
+                    alert('Registration successful! Please login with your credentials.');
+                } else {
+                    alert(data.message || 'Registration failed');
+                }
+            })
+            .catch(error => {
+                console.error('Registration error:', error);
+                alert('An error occurred during registration');
+            });
+        }
+        
+        function initializeSocket() {
+            // Disconnect existing socket if any
+            if (socket) {
+                socket.disconnect();
+            }
+
+            updateConnectionStatus('connecting');
+
+            socket = io('http://localhost:5000', {
+                auth: {
+                    token: token
+                },
+                transports: ['websocket'],
+                reconnection: true,
+                reconnectionAttempts: maxReconnectAttempts,
+                reconnectionDelay: reconnectDelay,
+                reconnectionDelayMax: 5000,
+                randomizationFactor: 0.5
+            });
+
+            // Connection established
+            socket.on('connect', () => {
+                console.log('Connected to socket server');
+                isConnected = true;
+                reconnectAttempts = 0;
+                updateConnectionStatus('connected');
+                socket.emit('joinRooms');
+            });
+
+            // Connection error
+            socket.on('connect_error', (error) => {
+                console.log('Connection error:', error);
+                updateConnectionStatus('disconnected');
+            });
+
+            // Reconnecting
+            socket.on('reconnecting', (attempt) => {
+                console.log(`Reconnecting attempt ${attempt}`);
+                reconnectAttempts = attempt;
+                updateConnectionStatus('reconnecting');
+            });
+
+            // Reconnect failed
+            socket.on('reconnect_failed', () => {
+                console.log('Reconnection failed');
+                updateConnectionStatus('disconnected');
+                alert('Connection lost. Please refresh the page.');
+            });
+
+            // Disconnected
+            socket.on('disconnect', (reason) => {
+                console.log('Disconnected:', reason);
+                isConnected = false;
+                if (reason === 'io server disconnect') {
+                    // Server intentionally disconnected, try to reconnect
+                    setTimeout(() => {
+                        if (!isConnected) {
+                            initializeSocket();
+                        }
+                    }, reconnectDelay);
+                }
+                updateConnectionStatus('disconnected');
+            });
+
+            // New message received
+            socket.on('newMessage', (message) => {
+                handleNewMessage(message);
+            });
+
+            // Message updated
+            socket.on('messageUpdated', (message) => {
+                updateMessageInUI(message);
+            });
+
+            // Message deleted
+            socket.on('messageDeleted', (messageId) => {
+                removeMessageFromUI(messageId);
+            });
+
+            // Reaction added
+            socket.on('reactionAdded', (data) => {
+                updateReactionsInUI(data.messageId, data.reactions);
+            });
+
+            // User typing
+            socket.on('userTyping', (data) => {
+                showTypingIndicator(data.userId, data.name);
+            });
+
+            // User stopped typing
+            socket.on('userStoppedTyping', (data) => {
+                hideTypingIndicator(data.userId);
+            });
+        }
+        
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const indicator = document.getElementById('status-indicator');
+            const text = document.getElementById('status-text');
+
+            statusElement.style.display = 'block';
+            
+            switch (status) {
+                case 'connected':
+                    indicator.style.backgroundColor = '#4CAF50';
+                    text.textContent = 'Online';
+                    statusElement.style.backgroundColor = 'rgba(76, 175, 80, 0.2)';
+                    break;
+                case 'connecting':
+                    indicator.style.backgroundColor = '#FFC107';
+                    text.textContent = 'Connecting...';
+                    statusElement.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+                    break;
+                case 'reconnecting':
+                    indicator.style.backgroundColor = '#FFC107';
+                    text.textContent = `Reconnecting (${reconnectAttempts}/${maxReconnectAttempts})`;
+                    statusElement.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+                    break;
+                case 'disconnected':
+                    indicator.style.backgroundColor = '#F44336';
+                    text.textContent = 'Offline';
+                    statusElement.style.backgroundColor = 'rgba(244, 67, 54, 0.2)';
+                    break;
+            }
+        }
+        
+        async function loadChats() {
+            try {
+                const response = await fetch('http://localhost:5000/api/chat', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const chats = await response.json();
+                
+                chatList.innerHTML = '';
+                chats.forEach(chat => {
+                    addChatToUI(chat);
+                });
+            } catch (error) {
+                console.error('Error loading chats:', error);
+            }
+        }
+        
+        async function loadUsers() {
+            try {
+                const response = await fetch('http://localhost:5000/api/users', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        console.log("User doesn't have permission to access all users");
+                        // Try an alternative endpoint or handle differently
+                        allUsers = [];
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                allUsers = await response.json();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                allUsers = [];
+            }
+        }
+        
+        function addChatToUI(chat) {
+            const chatItem = document.createElement('li');
+            chatItem.className = 'chat-item';
+            chatItem.dataset.chatId = chat._id;
+            
+            let chatName = chat.name;
+            if (!chat.isGroupChat && chat.members) {
+                const otherMember = chat.members.find(member => member._id !== currentUser._id);
+                if (otherMember) {
+                    chatName = otherMember.name;
+                }
+            }
+            
+            let lastMessage = 'No messages yet';
+            if (chat.lastMessage) {
+                lastMessage = chat.lastMessage.content || 'Attachment';
+                if (lastMessage.length > 30) {
+                    lastMessage = lastMessage.substring(0, 30) + '...';
+                }
+            }
+            
+            chatItem.innerHTML = `
+                <div class="chat-item-name">${chatName}</div>
+                <div class="chat-item-last">${lastMessage}</div>
+                <div class="chat-item-time">${chat.lastMessage ? new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                ${chat.unreadCounts && chat.unreadCounts[currentUser._id] > 0 ? 
+                    `<span class="unread-count">${chat.unreadCounts[currentUser._id]}</span>` : ''}
+            `;
+            
+            chatItem.addEventListener('click', () => {
+                selectChat(chat);
+            });
+            
+            chatList.appendChild(chatItem);
+        }
+        
+        function updateChatListItem(chatId, message) {
+            const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"]`);
+            if (chatItem) {
+                const lastMessageDiv = chatItem.querySelector('.chat-item-last');
+                if (lastMessageDiv) {
+                    const preview = message.content ? 
+                        (message.content.length > 30 ? message.content.substring(0, 30) + '...' : message.content) : 
+                        'Attachment';
+                    lastMessageDiv.textContent = preview;
+                }
+                
+                const timeDiv = chatItem.querySelector('.chat-item-time');
+                if (timeDiv && message.createdAt) {
+                    timeDiv.textContent = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                if (!currentChat || currentChat._id !== chatId) {
+                    const unreadSpan = chatItem.querySelector('.unread-count');
+                    if (unreadSpan) {
+                        const currentCount = parseInt(unreadSpan.textContent) || 0;
+                        unreadSpan.textContent = currentCount + 1;
+                    } else {
+                        const unreadSpan = document.createElement('span');
+                        unreadSpan.className = 'unread-count';
+                        unreadSpan.textContent = '1';
+                        chatItem.appendChild(unreadSpan);
+                    }
+                }
+            }
+        }
+        
+        async function selectChat(chat) {
+            currentChat = chat;
+            
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const selectedItem = document.querySelector(`.chat-item[data-chat-id="${chat._id}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('active');
+                
+                const unreadSpan = selectedItem.querySelector('.unread-count');
+                if (unreadSpan) {
+                    unreadSpan.remove();
+                }
+            }
+            
+            let chatName = chat.name;
+            if (!chat.isGroupChat && chat.members) {
+                const otherMember = chat.members.find(member => member._id !== currentUser._id);
+                if (otherMember) {
+                    chatName = otherMember.name;
+                }
+            }
+            
+            chatHeader.textContent = chatName;
+            messageInput.disabled = false;
+            sendBtn.disabled = false;
+            
+            await loadMessages();
+        }
+        
+        async function loadMessages() {
+            try {
+                const response = await fetch(`http://localhost:5000/api/chat/${currentChat._id}/messages`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const messages = await response.json();
+                messagesInner.innerHTML = '';
+                
+                // Append messages in chronological order
+                messages.forEach(message => {
+                    const messageDiv = createMessageElement(message, message.sender._id !== currentUser._id);
+                    messagesInner.appendChild(messageDiv);
+                });
+                
+                // Scroll to bottom after loading
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Mark messages as read
+                const unreadMessages = messages
+                    .filter(msg => !msg.readBy.includes(currentUser._id))
+                    .map(msg => msg._id);
+                
+                if (unreadMessages.length > 0) {
+                    markMessagesAsRead(unreadMessages);
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+        
+        function createMessageElement(message, isReceived) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isReceived ? 'received' : 'sent'} ${message.tempId ? 'sending' : ''}`;
+            if (message._id) {
+                messageDiv.dataset.messageId = message._id;
+            }
+            if (message.tempId) {
+                messageDiv.dataset.tempId = message.tempId;
+            }
+            
+            const senderName = isReceived ? message.sender.name : 'You';
+            const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            let contentHTML = '';
+            if (message.content) {
+                contentHTML = `<div class="message-content">${message.content}</div>`;
+            }
+            
+            let attachmentsHTML = '';
+            if (message.attachments && message.attachments.length > 0) {
+                attachmentsHTML = message.attachments.map(attachment => 
+                    `<a href="${attachment.url}" class="attachment" target="_blank">${attachment.name || 'Attachment'}</a>`
+                ).join('');
+            }
+            
+            let reactionsHTML = '';
+            if (message.reactions && message.reactions.length > 0) {
+                reactionsHTML = message.reactions.map(reaction => 
+                    `<span class="reaction" title="${reaction.user.name}">${reaction.emoji}</span>`
+                ).join('');
+            }
+            
+            let actionsHTML = '';
+            if (!isReceived && !message.tempId) {
+                actionsHTML = `
+                    <div class="message-actions">
+                        <button onclick="editMessage('${message._id || message.tempId}')">Edit</button>
+                        <button onclick="deleteMessage('${message._id || message.tempId}')">Delete</button>
+                    </div>
+                `;
+            }
+            
+            let statusHTML = '';
+            if (message.tempId) {
+                statusHTML = `<div class="message-status">Sending...</div>`;
+            } else if (!isReceived) {
+                const readStatus = message.readBy && message.readBy.length > 0 ? 'Read' : 'Delivered';
+                statusHTML = `<div class="message-status">${readStatus}</div>`;
+            }
+            
+            messageDiv.innerHTML = `
+                ${actionsHTML}
+                ${isReceived ? `<div class="message-sender">${senderName}</div>` : ''}
+                ${contentHTML}
+                ${attachmentsHTML}
+                ${reactionsHTML ? `<div style="margin-top: 5px;">${reactionsHTML}</div>` : ''}
+                <div class="message-time">${time} ${message.edited ? '(edited)' : ''}</div>
+                ${statusHTML}
+            `;
+            
+            return messageDiv;
+        }
+
+        function addMessageToUI(message, isReceived) {
+            const messageDiv = createMessageElement(message, isReceived);
+            messagesInner.appendChild(messageDiv);
+            
+            // Scroll to bottom if we're near the bottom
+            const isNearBottom = messagesContainer.scrollHeight - messagesContainer.clientHeight <= messagesContainer.scrollTop + 100;
+            if (isNearBottom) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        function handleNewMessage(message) {
+            // Check if this is our optimistic message being confirmed
+            if (message.tempId && tempMessages[message.tempId]) {
+                const tempMsgElement = document.querySelector(`.message[data-temp-id="${message.tempId}"]`);
+                if (tempMsgElement) {
+                    tempMsgElement.remove();
+                    delete tempMessages[message.tempId];
+                }
+            }
+            
+            if (currentChat && message.room === currentChat._id) {
+                addMessageToUI(message, message.sender._id !== currentUser._id);
+                
+                // Mark as delivered
+                if (socket && message.sender._id !== currentUser._id) {
+                    socket.emit('messageDelivered', message._id);
+                }
+            }
+            
+            updateChatListItem(message.room, message);
+        }
+        
+        function updateMessageInUI(message) {
+            const messageDiv = document.querySelector(`.message[data-message-id="${message._id}"]`);
+            if (messageDiv) {
+                const contentDiv = messageDiv.querySelector('.message-content');
+                if (contentDiv) {
+                    contentDiv.textContent = message.content;
+                }
+                
+                const timeDiv = messageDiv.querySelector('.message-time');
+                if (timeDiv) {
+                    timeDiv.textContent = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (edited)';
+                }
+            }
+        }
+        
+        function removeMessageFromUI(messageId) {
+            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                const contentDiv = messageDiv.querySelector('.message-content');
+                if (contentDiv) {
+                    contentDiv.textContent = 'This message has been deleted';
+                    contentDiv.style.fontStyle = 'italic';
+                    contentDiv.style.opacity = '0.7';
+                }
+                
+                const actionsDiv = messageDiv.querySelector('.message-actions');
+                if (actionsDiv) {
+                    actionsDiv.remove();
+                }
+            }
+        }
+        
+        function updateReactionsInUI(messageId, reactions) {
+            const messageDiv = document.querySelector(`.message[data-message-id="${messageId}"]`);
+            if (messageDiv) {
+                let reactionsContainer = messageDiv.querySelector('.reactions-container');
+                if (!reactionsContainer) {
+                    reactionsContainer = document.createElement('div');
+                    reactionsContainer.className = 'reactions-container';
+                    messageDiv.appendChild(reactionsContainer);
+                }
+                
+                reactionsContainer.innerHTML = reactions.map(reaction => 
+                    `<span class="reaction" title="${reaction.user.name}">${reaction.emoji}</span>`
+                ).join('');
+            }
+        }
+        
+        function showTypingIndicator(userId, userName) {
+            // Clear existing timeout if any
+            if (typingUsers[userId]) {
+                clearTimeout(typingUsers[userId].timeout);
+            } else {
+                // Add new typing indicator
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator-bubble';
+                typingDiv.id = `typing-${userId}`;
+                typingDiv.textContent = `${userName} is typing...`;
+                typingIndicators.appendChild(typingDiv);
+            }
+            
+            // Set timeout to remove the indicator
+            typingUsers[userId] = {
+                timeout: setTimeout(() => {
+                    hideTypingIndicator(userId);
+                }, typingTimeout)
+            };
+        }
+        
+        function hideTypingIndicator(userId) {
+            if (typingUsers[userId]) {
+                clearTimeout(typingUsers[userId].timeout);
+                delete typingUsers[userId];
+            }
+            
+            const typingDiv = document.getElementById(`typing-${userId}`);
+            if (typingDiv) {
+                typingDiv.remove();
+            }
+        }
+        
+        function handleTyping() {
+            if (!currentChat || !socket) return;
+            
+            if (messageInput.value.trim()) {
+                socket.emit('typing', currentChat._id);
+            } else {
+                socket.emit('stopTyping', currentChat._id);
+            }
+        }
+        
+        function stopTyping() {
+            if (socket && currentChat) {
+                socket.emit('stopTyping', currentChat._id);
+            }
+        }
+        
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    func.apply(context, args);
+                }, wait);
+            };
+        }
+        
+        async function sendMessage() {
+            const content = messageInput.value.trim();
+            
+            if (!content || !currentChat || !socket) return;
+
+            const tempId = 'temp-' + Date.now();
+            const tempMessage = {
+                tempId: tempId,
+                room: currentChat._id,
+                sender: {
+                    _id: currentUser._id,
+                    name: currentUser.name
+                },
+                content: content,
+                createdAt: new Date().toISOString()
+            };
+            
+            tempMessages[tempId] = true;
+            addMessageToUI(tempMessage, false);
+            messageInput.value = '';
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/chat/${currentChat._id}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        tempId: tempId
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Error sending message:', error);
+                    updateMessageStatus(tempId, 'failed');
+                    alert('Failed to send message');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                updateMessageStatus(tempId, 'failed');
+                alert('An error occurred while sending message');
+            }
+        }
+        
+        function updateMessageStatus(messageId, status) {
+            const messageElement = document.querySelector(`.message[data-message-id="${messageId}"], .message[data-temp-id="${messageId}"]`);
+            if (messageElement) {
+                let statusElement = messageElement.querySelector('.message-status');
+                if (!statusElement) {
+                    statusElement = document.createElement('div');
+                    statusElement.className = 'message-status';
+                    messageElement.appendChild(statusElement);
+                }
+                
+                switch (status) {
+                    case 'sending':
+                        statusElement.textContent = 'Sending...';
+                        statusElement.style.color = '#FFC107';
+                        break;
+                    case 'delivered':
+                        statusElement.textContent = 'Delivered';
+                        statusElement.style.color = '#4CAF50';
+                        break;
+                    case 'read':
+                        statusElement.textContent = 'Read';
+                        statusElement.style.color = '#2196F3';
+                        break;
+                    case 'failed':
+                        statusElement.textContent = 'Failed - Tap to retry';
+                        statusElement.style.color = '#F44336';
+                        messageElement.style.opacity = '0.7';
+                        messageElement.style.cursor = 'pointer';
+                        messageElement.onclick = () => retryMessage(messageId);
+                        break;
+                }
+            }
+        }
+        
+        function retryMessage(tempId) {
+            const tempMsgElement = document.querySelector(`.message[data-temp-id="${tempId}"]`);
+            if (tempMsgElement) {
+                const content = tempMsgElement.querySelector('.message-content')?.textContent;
+                if (content) {
+                    messageInput.value = content;
+                    tempMsgElement.remove();
+                    delete tempMessages[tempId];
+                    messageInput.focus();
+                }
+            }
+        }
+        
+        async function markMessagesAsRead(messageIds) {
+            if (!currentChat || messageIds.length === 0) return;
+            
+            try {
+                await fetch(`http://localhost:5000/api/chat/${currentChat._id}/messages/read`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        messageIds: messageIds
+                    })
+                });
+            } catch (error) {
+                console.error('Error marking messages as read:', error);
+            }
+        }
+        
+        async function editMessage(messageId) {
+            const newContent = prompt('Edit your message:');
+            if (newContent === null || newContent.trim() === '') return;
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/chat/messages/${messageId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        content: newContent
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to edit message');
+                }
+            } catch (error) {
+                console.error('Error editing message:', error);
+                alert('An error occurred while editing message');
+            }
+        }
+        
+        async function deleteMessage(messageId) {
+            if (!confirm('Are you sure you want to delete this message?')) return;
+            
+            try {
+                const response = await fetch(`http://localhost:5000/api/chat/messages/${messageId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to delete message');
+                }
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                alert('An error occurred while deleting message');
+            }
+        }
+        
+        function showGroupModal() {
+            userList.innerHTML = '';
+            
+            if (allUsers.length === 0) {
+                userList.innerHTML = '<p>No other users available to add to group</p>';
+                createGroupBtn.disabled = true;
+                return;
+            }
+            
+            allUsers.forEach(user => {
+                if (user._id !== currentUser._id) {
+                    const userDiv = document.createElement('div');
+                    userDiv.innerHTML = `
+                        <input type="checkbox" id="user-${user._id}" value="${user._id}">
+                        <label for="user-${user._id}">${user.name}</label>
+                    `;
+                    userList.appendChild(userDiv);
+                }
+            });
+            
+            groupModal.style.display = 'flex';
+            createGroupBtn.disabled = false;
+        }
+        
+        function hideGroupModal() {
+            groupModal.style.display = 'none';
+            groupNameInput.value = '';
+        }
+        
+        async function createGroup() {
+            const groupName = groupNameInput.value.trim();
+            if (!groupName) {
+                alert('Please enter a group name');
+                return;
+            }
+            
+            const selectedUsers = [];
+            document.querySelectorAll('#user-list input[type="checkbox"]:checked').forEach(checkbox => {
+                selectedUsers.push(checkbox.value);
+            });
+            
+            if (selectedUsers.length === 0) {
+                alert('Please select at least one user');
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:5000/api/chat/group', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        participantIds: selectedUsers,
+                        name: groupName
+                    })
+                });
+                
+                if (response.ok) {
+                    const newChat = await response.json();
+                    addChatToUI(newChat);
+                    hideGroupModal();
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Failed to create group');
+                }
+            } catch (error) {
+                console.error('Error creating group:', error);
+                alert('An error occurred while creating group');
+            }
+        }
+        
+        window.editMessage = editMessage;
+        window.deleteMessage = deleteMessage;
+    </script>
+</body>
+</html>
