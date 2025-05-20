@@ -109,7 +109,7 @@ export default function TutorCoursesPage() {
         throw new Error('User not authenticated');
       }
 
-      const response = await fetch('http://localhost:5000/api/course', {
+      const response = await fetch('http://localhost:5000/api/course/tutor', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -119,15 +119,10 @@ export default function TutorCoursesPage() {
         throw new Error('Failed to fetch courses');
       }
 
-      const data = await response.json();
-      
-      // Filter courses where tutor matches the logged-in user's ID
-      const tutorCourses = data.filter((course: any) => 
-        course.tutor && course.tutor === user.id
-      );
-
-      console.log('Filtered courses:', tutorCourses);
-      setCourses(tutorCourses);
+      const data = await response.json();      
+     
+      console.log('Filtered courses:', data);
+      setCourses(data);
     } catch (error) {
       toast({
         variant: "destructive",

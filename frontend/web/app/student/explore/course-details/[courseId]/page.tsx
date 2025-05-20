@@ -273,7 +273,7 @@ export default function CourseDetailsPage() {
               </Button>
             ) : (
               <Button asChild>
-                <Link href={`/student/courses/${course._id}/checkout`}>
+                <Link href={`/student/checkout/${course._id}`}>
                   Enroll Now
                 </Link>
               </Button>
@@ -470,7 +470,7 @@ export default function CourseDetailsPage() {
                         </Button>
                       ) : (
                         <Button className="w-full" asChild>
-                          <Link href={`/student/courses/${course._id}/checkout`}>
+                          <Link href={`/student/checkout/${course._id}`}>
                             Enroll Now
                           </Link>
                         </Button>

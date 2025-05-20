@@ -83,7 +83,7 @@ class ChatService {
       });
 
       if (!room) {
-        return { error: "You are not a member of this chat" };
+        throw new Error("You are not a member of this chat");
       }
 
       const message = await Message.create({
@@ -99,13 +99,19 @@ class ChatService {
         select: 'name avatar'
       });
 
-      this.io.to(roomId.toString()).emit('newMessage', populatedMessage);
+      // Make sure io is available and has the to() method
+      if (this.io && typeof this.io.to === 'function') {
+        this.io.to(roomId.toString()).emit('newMessage', populatedMessage);
+      } else {
+        console.error('Socket.IO instance is not properly initialized');
+      }
+
       await this.updateUnreadCounts(roomId, senderId);
 
       return populatedMessage;
     } catch (error) {
       console.error("Error sending message:", error);
-      return { error: "Failed to send message" };
+      throw error; // Re-throw the error to be caught by the controller
     }
   }
 
