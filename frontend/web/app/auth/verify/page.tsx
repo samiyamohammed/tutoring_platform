@@ -29,72 +29,92 @@ export default function VerifyPage() {
   }, [timeLeft, isVerified])
 
   const handleResendCode = async () => {
-    setIsLoading(true)
+  setIsLoading(true);
 
-    try {
-      // This would be replaced with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+  try {
+    const response = await fetch("http://localhost:5000/api/auth/resend-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
 
-      toast({
-        title: "Verification code resent",
-        description: "Please check your email for the new code.",
-      })
+    const result = await response.json();
 
-      setTimeLeft(60)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to resend verification code. Please try again.",
-      })
-    } finally {
-      setIsLoading(false)
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to resend verification code.");
     }
+
+    toast({
+      title: "Verification code resent",
+      description: "Please check your email for the new code.",
+    });
+
+    setTimeLeft(60);
+  } catch (error: any) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: error.message || "Failed to resend verification code. Please try again.",
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+ const handleVerify = async () => {
+  if (!verificationCode) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "Please enter the verification code.",
+    });
+    return;
   }
 
-  const handleVerify = async () => {
-    if (!verificationCode) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter the verification code.",
-      })
-      return
+  setIsLoading(true);
+
+  try {
+    const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp: verificationCode }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      if (result.message === "OTP expired") {
+        toast({
+          variant: "destructive",
+          title: "Code Expired",
+          description: "Your verification code has expired. Please resend the code.",
+        });
+        return;
+      }
+
+      throw new Error(result.message || "Invalid verification code.");
     }
 
-    setIsLoading(true)
+    setIsVerified(true);
 
-    try {
-      // This would be replaced with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+    toast({
+      title: "Email verified!",
+      description: "Your email has been successfully verified.",
+    });
 
-      setIsVerified(true)
-
-      toast({
-        title: "Email verified!",
-        description: "Your email has been successfully verified.",
-      })
-
-      // Redirect based on role (for demo, we'll check email)
-      setTimeout(() => {
-        if (email.includes("admin")) {
-          router.push("/admin/dashboard")
-        } else if (email.includes("tutor")) {
-          router.push("/tutor/verification")
-        } else {
-          router.push("/student/dashboard")
-        }
-      }, 2000)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid verification code. Please try again.",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    setTimeout(() => {
+      router.push("/auth/signin");
+    }, 2000);
+  } catch (error: any) {
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: error.message || "Invalid verification code. Please try again.",
+    });
+  } finally {
+    setIsLoading(false);
   }
+};
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">

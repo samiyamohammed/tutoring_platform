@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Update Tutor Verification Documents</title>
+</head>
+<body>
+  <h2>Upload Verification Documents</h2>
+  <form id="uploadForm">
+    <label>
+      Tutor ID:
+      <input type="text" name="tutorId" id="tutorId" required />
+    </label>
+    <br /><br />
+
+    <label>
+      Qualification:
+      <input type="text" name="qualification" id="qualification" />
+    </label>
+    <br /><br />
+
+    <label>
+      Experience (years):
+      <input type="number" name="experience" id="experience" />
+    </label>
+    <br /><br />
+
+    <label>
+      Subjects (comma separated):
+      <input type="text" name="subjects" id="subjects" />
+    </label>
+    <br /><br />
+
+    <label>
+      Upload Verification Documents:
+      <input type="file" name="files" id="files" multiple />
+    </label>
+    <br /><br />
+
+    <button type="submit">Upload</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const tutorId = document.getElementById("tutorId").value;
+      const formData = new FormData();
+
+      // Add text fields
+      const qualification = document.getElementById("qualification").value;
+      const experience = document.getElementById("experience").value;
+      const subjects = document.getElementById("subjects").value;
+
+      formData.append("qualification", qualification);
+      formData.append("experience", experience);
+      formData.append("subjects", subjects);
+
+      // Add files
+      const files = document.getElementById("files").files;
+      for (let i = 0; i < files.length; i++) {
+        formData.append("files", files[i]);
+      }
+
+      try {
+        const res = await fetch(`http://localhost:3000/api/users/${tutorId}`, {
+          method: "PUT",
+            headers: {
+                "Authorization" : `Bearer ${localStorage.getItem("token")}`
+            },
+          body: formData
+        });
+
+        const result = await res.json();
+        document.getElementById("result").innerText = JSON.stringify(result, null, 2);
+      } catch (err) {
+        document.getElementById("result").innerText = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

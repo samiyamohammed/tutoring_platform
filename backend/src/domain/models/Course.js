@@ -1,3 +1,5 @@
+//course.js
+
 import mongoose from "mongoose";
 import ModuleSchema from "./Module.js";
 import QuizSchema from "./Quiz.js";
@@ -10,7 +12,6 @@ const CourseSchema = new mongoose.Schema({
   deadline: { type: Date, required: true }, // New field for deadline
   tutor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   modules: [ModuleSchema],
-  quizzes: [QuizSchema],
   sessionTypes: [{ // Array of session types with pricing and schedules
     type: String,
     enum: ['online', 'group', 'oneOnOne'],
@@ -53,14 +54,18 @@ const CourseSchema = new mongoose.Schema({
   },
   capacity: { type: Number },
   waitingListCapacity: { type: Number, default: 0 },
-  currentEnrollment: { type: Number, default: 0 },
   waitingList: [{ type: mongoose.Schema.Types.ObjectId, ref: 'WaitingList' }],
 }, { timestamps: true });
+
+// Ensure virtuals are included in JSON output
+CourseSchema.set("toObject", { virtuals: true });
+CourseSchema.set("toJSON", { virtuals: true });
 
 CourseSchema.pre(/^find/, function(next) {
   this.populate('tutor', 'name email') // Modify here to include fields you want from User // Populate modules if needed
   next();
 });
+
 
 const Course = mongoose.model('Course', CourseSchema);
 
