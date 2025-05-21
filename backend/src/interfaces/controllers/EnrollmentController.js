@@ -1,6 +1,4 @@
 import EnrollmentService from "../../application/services/EnrollmentService.js";
-import Course from "../../domain/models/Course.js";
-import Enrollment from "../../domain/models/Enrollment.js";
 
 class EnrollmentController {
   async enrollStudent(req, res) {
@@ -13,24 +11,12 @@ class EnrollmentController {
     }
   }
 
-  async getEnrollmentsByTutor(req, res) {
+  async getAllEnrollments(req, res) {
     try {
-      console.log("Fetching enrollments for tutor:", req.user._id);
-      const tutorId = req.user._id;
-
-      // Step 1: Find all courses taught by the tutor
-      const courses = await Course.find({ tutor: tutorId }); // Adjust based on Course schema
-      const courseIds = courses.map((course) => course._id);
-
-      // Step 2: Find all enrollments where course is in those courseIds
-      const enrollments = await Enrollment.find({ course: { $in: courseIds } })
-        .populate("student") // Gets student info
-        .populate("course"); // Gets course info
-
+      const enrollments = await EnrollmentService.getAllEnrollments();
       res.status(200).json(enrollments);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to get enrollments for tutor" });
+      res.status(400).json({ message: error.message });
     }
   }
 
