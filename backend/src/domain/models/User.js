@@ -7,6 +7,9 @@ const userSchema = new mongoose.Schema(
     profile: { type: String },
     password: { type: String, required: true },
     role: { type: String, enum: ["student", "tutor", "admin"], default: "student" },
+    emailVerified: { type: Boolean, default: false },
+    otp: {type: String},
+    otpExpiresAt: {type: Date},
   },
   { timestamps: true, discriminatorKey: "role" }
 );

@@ -1,7 +1,8 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   BookOpen,
   Calendar,
@@ -37,11 +38,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth-provider"
 
 export function StudentSidebar() {
   const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const router = useRouter()
+  const [user, setUser] = useState<{ firstName?: string; lastName?: string; id?: string } | null>(null)
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    if (storedUser) {
+      setUser(JSON.parse(storedUser))
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.clear()
+    router.push("/auth/signin")
+  }
 
   const isActive = (path: string) => {
     return pathname === path || pathname?.startsWith(`${path}/`)
@@ -161,7 +174,7 @@ export function StudentSidebar() {
               <Link href="/student/settings">Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>

@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
@@ -15,7 +15,7 @@ import {
   Shield,
   Upload,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -28,25 +28,25 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth-provider"
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-provider";
 
 export function AdminSidebar() {
-  const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(`${path}/`)
-  }
+    return pathname === path || pathname?.startsWith(`${path}/`);
+  };
 
   return (
     <Sidebar>
@@ -62,7 +62,10 @@ export function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/dashboard")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/dashboard")}
+                >
                   <Link href="/admin/dashboard">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
@@ -78,7 +81,10 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/courses")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/courses")}
+                >
                   <Link href="/admin/courses">
                     <BookOpen className="h-4 w-4" />
                     <span>Courses</span>
@@ -86,7 +92,10 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/tutor-requests")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/tutor-requests")}
+                >
                   <Link href="/admin/tutor-requests">
                     <FileCheck className="h-4 w-4" />
                     <span>Tutor Requests</span>
@@ -94,15 +103,21 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/certificate-templates")}>
-                  <Link href="/admin/certificate-templates">
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/certificate-templates")}
+                >
+                  <Link href="/admin/certification-template">
                     <Award className="h-4 w-4" />
                     <span>Certificate Templates</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/upload-settings")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/upload-settings")}
+                >
                   <Link href="/admin/upload-settings">
                     <Upload className="h-4 w-4" />
                     <span>Upload Settings</span>
@@ -110,15 +125,21 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/reports")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/reports")}
+                >
                   <Link href="/admin/reports">
                     <Flag className="h-4 w-4" />
-                    <span>Reports</span>
+                    <span>Feedbacks and Reports</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/payments")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/payments")}
+                >
                   <Link href="/admin/payments">
                     <CreditCard className="h-4 w-4" />
                     <span>Payments</span>
@@ -126,7 +147,10 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/settings")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/settings")}
+                >
                   <Link href="/admin/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
@@ -142,7 +166,9 @@ export function AdminSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start px-2">
               <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage src={`https://avatar.vercel.sh/${user?.id || "admin"}`} />
+                <AvatarImage
+                  src={`https://avatar.vercel.sh/${user?.id || "admin"}`}
+                />
                 <AvatarFallback>
                   <Shield className="h-4 w-4" />
                 </AvatarFallback>
@@ -167,5 +193,5 @@ export function AdminSidebar() {
         </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
