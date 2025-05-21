@@ -56,14 +56,14 @@ export default function SignUpPage() {
     setIsLoading(true);
   
     try {
-      // Merge firstName and lastName into a single name attribute
-      const { firstName, lastName, ...rest } = values;
+      const { firstName, lastName, role, ...rest } = values;
+  
       const formattedData = {
         ...rest,
-        name: `${firstName} ${lastName}`, // Combine first and last name
+        name: `${firstName} ${lastName}`,
+        role,
       };
   
-      // Simulate API call
       const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: {
@@ -72,8 +72,10 @@ export default function SignUpPage() {
         body: JSON.stringify(formattedData),
       });
   
+      const result = await response.json();
+  
       if (!response.ok) {
-        throw new Error('Failed to create account');
+        throw new Error(result.message || 'Failed to create account');
       }
   
       toast({
@@ -81,18 +83,19 @@ export default function SignUpPage() {
         description: "Please check your email to verify your account.",
       });
   
-      // Redirect to verification page
-      router.push(`/auth/signin`);
-    } catch (error) {
+      // Redirect to OTP verification page with email as query param
+      router.push(`/auth/verify?email=${encodeURIComponent(formattedData.email)}`);
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
       });
     } finally {
       setIsLoading(false);
     }
   }
+  
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">

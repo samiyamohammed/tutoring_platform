@@ -57,6 +57,36 @@ class SocketConfig {
       socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
       });
+
+      socket.on("joinVideoRoom", (roomId) => {
+        socket.join(roomId);
+        console.log(`User ${socket.id} joined video room: ${roomId}`);
+        socket.to(roomId).emit("userJoined", socket.id); // notify others
+      });
+      
+      // Relay WebRTC offer
+      socket.on("videoOffer", ({ to, offer }) => {
+        socket.to(to).emit("videoOffer", {
+          from: socket.id,
+          offer,
+        });
+      });
+      
+      // Relay WebRTC answer
+      socket.on("videoAnswer", ({ to, answer }) => {
+        socket.to(to).emit("videoAnswer", {
+          from: socket.id,
+          answer,
+        });
+      });
+      
+      // Relay ICE candidates
+      socket.on("iceCandidate", ({ to, candidate }) => {
+        socket.to(to).emit("iceCandidate", {
+          from: socket.id,
+          candidate,
+        });
+      });
     });
   }
 }

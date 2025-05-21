@@ -1,19 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { BookOpen } from "lucide-react"
+import { BookOpen, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
-import { useAuth } from "@/lib/auth-provider";
+import { useAuth } from "@/lib/auth-provider"
 
 const formSchema = z.object({
   email: z.string().email({
@@ -24,11 +23,22 @@ const formSchema = z.object({
   }),
 })
 
+type Toast = {
+  id: string;
+  title: string;
+  description: string;
+  variant?: "default" | "destructive";
+}
+
 export default function SignInPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [isClient, setIsClient] = useState(false)
+  const [toasts, setToasts] = useState<Toast[]>([])
 
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,65 +48,122 @@ export default function SignInPage() {
     },
   })
 
+  const showToast = (toast: Omit<Toast, "id">) => {
+    if (!isClient) return;
+    
+    const id = Math.random().toString(36).substring(2, 9)
+    setToasts((prev) => [...prev, { ...toast, id }])
+    
+    setTimeout(() => {
+      dismissToast(id)
+    }, 5000)
+  }
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    try {
-        // 1. Make the API call
-        const response = await fetch('http://localhost:5000/api/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(values),
-        });
 
-        // 2. Handle non-successful responses
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || 'Login failed');
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email: values.email.trim(),
+          password: values.password
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        let errorMessage = "Login failed. Please try again.";
+        
+        if (response.status === 400) {
+          errorMessage = responseData.message || "Invalid request. Please check your input.";
+          if (responseData.errors) {
+            errorMessage = Object.values(responseData.errors).join('\n');
+          }
+        } else if (response.status === 401) {
+          errorMessage = "The email or password you entered is incorrect.";
+        } else if (response.status === 404) {
+          errorMessage = "User not found. Please check your email or sign up.";
         }
 
-        // 3. Process successful response
-        const responseData = await response.json();
-        const userData = responseData.token.user; // Accessing user data from the new structure
-        console.log('Login successful:', userData);
+        showToast({
+          variant: "destructive",
+          title: `Login Failed (${response.status})`,
+          description: errorMessage,
+        });
+        return;
+      }
 
-        // 4. Store token and user data
-        localStorage.setItem("token", responseData.token.token); // Store token
-        localStorage.setItem("user", JSON.stringify(userData)); // Store user data
+      const { token, user } = responseData;
 
-        // 5. Redirect based on role
-        const roleRedirects = {
-            admin: "/admin/dashboard",
-            tutor: "/tutor/dashboard", 
-            student: "/student/dashboard",
-            default: "/" // Fallback route
-        };
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
 
-        const redirectPath = roleRedirects[userData.role as keyof typeof roleRedirects] || roleRedirects.default;
-        console.log('Redirecting to:', redirectPath);
-        
-        // 6. Force a full page reload to ensure auth state is updated
-        window.location.href = redirectPath;
-        // Alternatively, if you prefer SPA navigation:
-        // router.push(redirectPath).then(() => window.location.reload());
+      showToast({
+        title: "Login Successful",
+        description: `Welcome back, ${user.name || user.email}!`,
+      });
+
+      const roleRedirects = {
+        admin: "/admin/dashboard",
+        tutor: "/tutor/dashboard",
+        student: "/student/dashboard",
+        default: "/"
+      };
+
+      const redirectPath = roleRedirects[user.role as keyof typeof roleRedirects] || roleRedirects.default;
+      window.location.href = redirectPath;
 
     } catch (error) {
-        console.error('Login error:', error);
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: error instanceof Error ? error.message : "An unexpected error occurred",
-        });
+      console.error('Login error:', error);
+      showToast({
+        variant: "destructive",
+        title: "Network Error",
+        description: "Could not connect to the server. Please try again later.",
+      });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-}
+  }
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      {/* Toast Container - Only rendered on client */}
+      {isClient && (
+        <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`relative flex w-full max-w-sm items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all ${
+                toast.variant === "destructive"
+                  ? "border-red-500 bg-red-50 text-red-900"
+                  : "border-gray-200 bg-white text-gray-900"
+              }`}
+            >
+              <div className="grid gap-1">
+                <p className="text-sm font-semibold">{toast.title}</p>
+                <p className="text-sm opacity-90">{toast.description}</p>
+              </div>
+              <button
+                onClick={() => dismissToast(toast.id)}
+                className="absolute right-2 top-2 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:opacity-100 focus:outline-none"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <Link href="/" className="absolute left-4 top-4 flex items-center gap-2 md:left-8 md:top-8">
         <BookOpen className="h-6 w-6" />
         <span className="font-bold">EduConnect</span>
@@ -106,6 +173,7 @@ export default function SignInPage() {
           <CardTitle className="text-2xl">Sign in</CardTitle>
           <CardDescription>Enter your email and password to sign in to your account</CardDescription>
         </CardHeader>
+        
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
