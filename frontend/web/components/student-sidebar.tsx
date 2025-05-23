@@ -15,6 +15,8 @@ import {
   Settings,
   Star,
   Video,
+  Bell,
+  MessageSquare,
 } from "lucide-react"
 
 import {
@@ -31,6 +33,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,26 +41,87 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { io } from "socket.io-client"
 
 export function StudentSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<{ firstName?: string; lastName?: string; id?: string } | null>(null)
+  const [hasNewNotifications, setHasNewNotifications] = useState(false)
+  const [hasNewMessages, setHasNewMessages] = useState(false)
+  const [socket, setSocket] = useState<any>(null)
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user")
     if (storedUser) {
       setUser(JSON.parse(storedUser))
     }
+
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:5000", {
+      withCredentials: true,
+      auth: {
+        token: localStorage.getItem("token"),
+      },
+    })
+
+    setSocket(newSocket)
+
+    return () => {
+      newSocket.disconnect()
+    }
   }, [])
 
+  useEffect(() => {
+    if (!socket) return
+
+    socket.on("new-notification", () => {
+      setHasNewNotifications(true)
+    })
+
+    socket.on("new-message", () => {
+      setHasNewMessages(true)
+    })
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/notifications/unread-count")
+        const data = await res.json()
+        if (data.count > 0) setHasNewNotifications(true)
+
+        const messagesRes = await fetch("http://localhost:5000/api/messages/unread-count")
+        const messagesData = await messagesRes.json()
+        if (messagesData.count > 0) setHasNewMessages(true)
+      } catch (error) {
+        console.error("Error checking notification/message status:", error)
+      }
+    }
+
+    checkStatus()
+
+    return () => {
+      socket.off("new-notification")
+      socket.off("new-message")
+    }
+  }, [socket])
+
   const handleLogout = () => {
+    if (socket) socket.disconnect()
     localStorage.clear()
     router.push("/auth/signin")
   }
 
   const isActive = (path: string) => {
     return pathname === path || pathname?.startsWith(`${path}/`)
+  }
+
+  const handleNotificationClick = () => {
+    setHasNewNotifications(false)
+    router.push("/student/notifications")
+  }
+
+  const handleMessageClick = () => {
+    setHasNewMessages(false)
+    router.push("/student/messages")
   }
 
   return (
@@ -73,6 +137,32 @@ export function StudentSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <div className="flex gap-2 px-4 py-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    onClick={handleNotificationClick}
+                  >
+                    <Bell className="h-4 w-4" />
+                    {hasNewNotifications && (
+                      <Badge className="absolute -right-1 -top-1 h-3 w-3 p-0 bg-red-500" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    onClick={handleMessageClick}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    {hasNewMessages && (
+                      <Badge className="absolute -right-1 -top-1 h-3 w-3 p-0 bg-blue-500" />
+                    )}
+                  </Button>
+                </div>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/student/dashboard")}>
                   <Link href="/student/dashboard">
@@ -126,14 +216,6 @@ export function StudentSidebar() {
                   <Link href="/student/waiting-list">
                     <Clock className="h-4 w-4" />
                     <span>Waiting List</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/student/wishlist")}>
-                  <Link href="/student/wishlist">
-                    <Star className="h-4 w-4" />
-                    <span>Wishlist</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

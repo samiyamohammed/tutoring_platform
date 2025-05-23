@@ -1,5 +1,5 @@
 import NotificationRepository from "../../infrastructure/repositories/NotificationRepository.js";
-import { getIO } from "../../infrastructure/config/socketConfig.js";
+import { io } from "../../infrastructure/config/socketConfig.js"; // Use io directly
 
 class NotificationService {
   async sendNotification({ title, message, recipients = [] }) {
@@ -10,11 +10,9 @@ class NotificationService {
         recipients,
       });
 
-      const io = getIO();
-
       if (recipients.length > 0) {
         recipients.forEach((userId) => {
-          io.to(userId).emit("newNotification", notification);
+          io.to(`user_${userId}`).emit("newNotification", notification); // Make sure to join with correct room name
         });
       } else {
         io.emit("newNotification", notification);
@@ -34,8 +32,7 @@ class NotificationService {
   async markAsRead(userId, notificationId) {
     try {
       await NotificationRepository.markNotificationAsRead(userId, notificationId);
-      const io = getIO();
-      io.to(userId).emit("notificationRead", { userId, notificationId });
+      io.to(`user_${userId}`).emit("notificationRead", { userId, notificationId }); // ✅ Use io directly
     } catch (error) {
       console.error("Error marking notification as read:", error);
       throw error;
@@ -43,4 +40,4 @@ class NotificationService {
   }
 }
 
-export default new NotificationService(); 
+export default new NotificationService();

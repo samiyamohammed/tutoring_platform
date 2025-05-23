@@ -7,7 +7,7 @@ const SessionSchema = new mongoose.Schema({
   course: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true },
   sessionType: { type: String, enum: ['video', 'in-person'], required: true }, 
   requestDate: { type: Date, default: Date.now }, 
-  status: { type: String, enum: ['pending', 'approved', 'declined'], default: 'pending' }, // Approval status
+  status: { type: String, enum: ['pending', 'approved', 'declined', 'completed'], default: 'pending' }, // Approval status
   scheduledDate: { type: Date }, // Date and time for the scheduled session
   notes: { type: String }, // Additional notes from the student or tutor
 }, { timestamps: true });

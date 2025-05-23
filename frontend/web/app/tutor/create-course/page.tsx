@@ -213,7 +213,7 @@ export default function CreateCoursePage() {
         title: "Course created successfully",
         description: "Your new course has been created and is ready for content.",
       });
-      router.push(`/tutor/dashboard`);
+      router.push(`/tutor/courses`);
     } catch (error) {
       toast({
         variant: "destructive",

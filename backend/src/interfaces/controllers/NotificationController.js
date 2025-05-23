@@ -1,4 +1,4 @@
-const NotificationService = require("../../application/services/NotificationService");
+import NotificationService from "../../application/services/NotificationService.js"; 
 
 class NotificationController {
   constructor(io) {
@@ -36,4 +36,4 @@ class NotificationController {
   }
 }
 
-module.exports = NotificationController;
+export default NotificationController; 

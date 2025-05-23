@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function () {
             reconnectionDelayMax: 5000
         });
 
-
         // Socket event listeners
         socket.on('connect', () => {
             console.log('Connected to socket server');
@@ -194,13 +193,36 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Handle new message
-        socket.on('newMessage', (message) => {
-            if (message.room === currentRoomId) {
-                addMessageToChat(message, message.sender._id === currentUser.id);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Handle new message - updated to match backend event name
+        socket.on('receive-message', (message) => {
+            if (message.room === currentRoomId || message.roomId === currentRoomId) {
+                // Check if this is our own message (optimistic update)
+                const isSent = message.sender._id === currentUser.id;
+
+                // For our own messages, we've already shown them via optimistic update
+                if (isSent) {
+                    // Just update the temporary message with the real ID and any server additions
+                    const tempMessageElement = document.querySelector(`[data-temp-id="temp-${message._id}"]`);
+                    if (tempMessageElement) {
+                        tempMessageElement.id = `message-${message._id}`;
+                        tempMessageElement.removeAttribute('data-temp-id');
+
+                        // Update any other fields that might have come from server
+                        const contentElement = tempMessageElement.querySelector('.message-content');
+                        if (contentElement && message.content !== contentElement.textContent) {
+                            contentElement.textContent = message.content;
+                        }
+                    }
+                } else {
+                    // For others' messages, add normally if not already present
+                    const existingMessage = document.getElementById(`message-${message._id}`);
+                    if (!existingMessage) {
+                        addMessageToChat(message, false);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
             } else {
-                updateRoomUnreadCount(message.room);
+                updateRoomUnreadCount(message.room || message.roomId);
             }
         });
 
@@ -298,17 +320,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             roomElement.innerHTML = `
-        <div class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
-             style="width: 40px; height: 40px;">${avatarText}</div>
-        <div class="room-info flex-grow-1">
-          <div class="room-name fw-bold">${roomName}</div>
-          <div class="last-message text-muted small text-truncate" style="max-width: 150px;">
-            ${room.lastMessage ? room.lastMessage.content : 'No messages yet'}
-          </div>
-        </div>
-        ${room.unreadCounts && room.unreadCounts[currentUser.id] > 0 ?
+                <div class="avatar rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" 
+                     style="width: 40px; height: 40px;">${avatarText}</div>
+                <div class="room-info flex-grow-1">
+                  <div class="room-name fw-bold">${roomName}</div>
+                  <div class="last-message text-muted small text-truncate" style="max-width: 150px;">
+                    ${room.lastMessage ? room.lastMessage.content : 'No messages yet'}
+                  </div>
+                </div>
+                ${room.unreadCounts && room.unreadCounts[currentUser.id] > 0 ?
                     `<span class="unread-count">${room.unreadCounts[currentUser.id]}</span>` : ''}
-      `;
+            `;
 
             roomElement.addEventListener('click', () => {
                 selectChatRoom(room._id);
@@ -351,11 +373,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const messages = await response.json();
             renderMessages(messages);
 
-            // Scroll to bottom
-            setTimeout(() => {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            }, 100);
-
         } catch (error) {
             console.error('Error loading messages:', error);
             alert(error.message);
@@ -370,9 +387,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        messages.forEach(message => {
+        // Reverse the array to show newest at bottom
+        messages.reverse().forEach(message => {
             addMessageToChat(message, message.sender._id === currentUser.id);
         });
+
+        // Scroll to bottom after rendering
+        setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 0);
     }
 
     function addMessageToChat(message, isSent) {
@@ -380,20 +403,29 @@ document.addEventListener('DOMContentLoaded', function () {
         messageElement.className = `message ${isSent ? 'sent' : 'received'}`;
         messageElement.id = `message-${message._id}`;
 
+        // Add data attribute for temporary messages
+        if (message._id.startsWith('temp-')) {
+            messageElement.setAttribute('data-temp-id', message._id);
+        }
+
         // Format time
-        const time = new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(message.createdAt || new Date()).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
         messageElement.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center mb-1">
-        <span class="sender-name fw-bold">${isSent ? 'You' : message.sender.name}</span>
-        <span class="message-time small text-muted">${time}</span>
-      </div>
-      <div class="message-content">${message.content}</div>
-      ${message.reactions && message.reactions.length > 0 ?
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="sender-name fw-bold">${isSent ? 'You' : message.sender.name}</span>
+            <span class="message-time small text-muted">${time}</span>
+        </div>
+        <div class="message-content">${message.content}</div>
+        ${message.reactions && message.reactions.length > 0 ?
                 `<div class="reactions mt-1">${renderReactions(message.reactions)}</div>` : ''}
-      ${message.edited ? '<small class="text-muted">edited</small>' : ''}
+        ${message.edited ? '<small class="text-muted">edited</small>' : ''}
     `;
 
+        // Append new messages to the end
         messagesContainer.appendChild(messageElement);
     }
 
@@ -485,20 +517,42 @@ document.addEventListener('DOMContentLoaded', function () {
         const content = messageInput.value.trim();
         if (content && currentRoomId) {
             try {
-                const response = await fetchWithAuth(`http://localhost:5000/api/chat/${currentRoomId}/messages`, {
-                    method: 'POST',
-                    body: JSON.stringify({ content })
-                });
+                // Generate a temporary ID that we can match later
+                const tempId = 'temp-' + Date.now();
 
-                if (!response.ok) {
-                    throw new Error('Failed to send message');
-                }
+                // Optimistic update - add message immediately
+                const tempMessage = {
+                    _id: tempId,
+                    content,
+                    sender: {
+                        _id: currentUser.id,
+                        name: currentUser.name,
+                        avatar: currentUser.avatar
+                    },
+                    createdAt: new Date(),
+                    room: currentRoomId
+                };
 
+                addMessageToChat(tempMessage, true);
                 messageInput.value = '';
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                // Send to server via socket.io
+                socket.emit('send-message', {
+                    roomId: currentRoomId,
+                    content: content,
+                    tempId: tempId  // Include the temp ID so server can echo it back
+                });
 
             } catch (error) {
                 console.error('Error sending message:', error);
                 alert(error.message);
+
+                // Remove the optimistic update if it failed
+                const tempMessageElement = document.querySelector(`[data-temp-id="${tempId}"]`);
+                if (tempMessageElement) {
+                    tempMessageElement.remove();
+                }
             }
         }
     }

@@ -46,12 +46,38 @@ class EnrollmentController {
     }
   }
 
+  async getEnrollmentById(req, res) {
+    try {
+      const enrollment = await EnrollmentService.getEnrollmentById(req.params.id);
+      if (!enrollment) {
+        return res.status(404).json({ message: 'Enrollment not found' });
+      }
+      res.status(200).json(enrollment);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
   async getCurrentEnrollment(req, res) {
     try {
       const enrollment = await EnrollmentService.getCurrentEnrollment(
         req.user._id,
-        req.params.courseId
+        req.params.id
       );
+      res.status(200).json(enrollment);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getCourseEnrollments(req, res) {
+    try {
+      const enrollment = await EnrollmentService.getCourseEnrollments(
+        req.params.id
+      );
+      if (!enrollment) {
+        return res.status(404).json({ message: 'Enrollment not found' });
+      }
       res.status(200).json(enrollment);
     } catch (error) {
       res.status(400).json({ message: error.message });

@@ -7,6 +7,8 @@ router.get("/",  enrollmentController.getAllEnrollments);  // Student enrolls in
 router.post("/enroll",  enrollmentController.enrollStudent);  // Student enrolls in a course
 router.get("/mycourses",  enrollmentController.getEnrollments);  // Get all enrollments for a student
 router.get("/tutor",  enrollmentController.getTutorEnrollments);  // Get all enrollments for a student
+router.get("/course/:id",  enrollmentController.getCourseEnrollments);  // Get all enrollments for a student
+router.get("/:id",  enrollmentController.getEnrollmentById);  // Get all enrollments for a student
 router.put("/:id",  enrollmentController.updateEnrollment);  // Update enrollment status
 router.get("/currentenrollment/:courseId",  enrollmentController.getCurrentEnrollment);  // Get all enrollments for a student
 router.put("/status",  enrollmentController.updateEnrollmentStatus);  // Update enrollment status

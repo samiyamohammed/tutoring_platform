@@ -25,10 +25,24 @@ class EnrollmentService {
     return await EnrollmentRepository.findByStudentId(studentId);
   }
 
+  async getEnrollmentById(enrollmentId) {
+    const enrollment = await EnrollmentRepository.findById(enrollmentId);
+    if (!enrollment) throw new Error('Enrollment not found');
+    return enrollment;
+  }
+
   async getCurrentEnrollment(studentId, courseId) {
     const enrollment = await EnrollmentRepository.findByStudentAndCourseId(studentId, courseId);
     if (!enrollment) throw new Error('Enrollment not found');
     return enrollment;
+  }
+
+  async getCourseEnrollments(courseId) {
+    const course = await CourseRepository.findById(courseId);
+    if (!course) throw new Error('Course not found');
+    const enrollments = await EnrollmentRepository.findByCourseId(courseId);
+    if (!enrollments) throw new Error('No enrollments found for this course');
+    return enrollments;
   }
 
   async updateEnrollmentStatus(enrollmentId, status) {

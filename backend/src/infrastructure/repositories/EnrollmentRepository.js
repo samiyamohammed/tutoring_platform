@@ -24,6 +24,10 @@ class EnrollmentRepository {
         return await Enrollment.findOne({ student: studentId, course: courseId }).populate('course student');
     }
 
+    async findByCourseId(courseId) {
+        return await Enrollment.find({ course: courseId }).populate('course student');
+    }
+
     async findByTutorId(tutorId) {
         try {
             // 1. First find all courses by this tutor

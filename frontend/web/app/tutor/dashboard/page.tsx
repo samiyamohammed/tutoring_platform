@@ -152,7 +152,7 @@ export default function TutorDashboardPage() {
 
         // Fetch current user (tutor) information
 
-        const tutorId = JSON.parse(localStorage.getItem('user') || '{}')._id
+        const tutorId = JSON.parse(localStorage.getItem('user') || '{}').id
 
         // Fetch all enrollments with populated course data
         const enrollmentsRes = await fetch('http://localhost:5000/api/enrollment', { headers })
@@ -161,7 +161,7 @@ export default function TutorDashboardPage() {
 
         // Filter enrollments where the course tutor matches the current user
         const tutorEnrollments = enrollmentsData.filter(
-          (e: Enrollment) => e.course?.tutor === tutorId
+          (e: Enrollment) => e.course?.tutor?._id === tutorId
         )
         setEnrollments(tutorEnrollments)
 

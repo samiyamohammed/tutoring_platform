@@ -5,7 +5,19 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { Camera, CameraOff, Hand, Mic, MicOff, Phone, PhoneOff, Users, Video, AlertTriangle } from "lucide-react"
+import {
+  Camera,
+  CameraOff,
+  Copy,
+  Mic,
+  MicOff,
+  MonitorUp,
+  Phone,
+  PhoneOff,
+  Users,
+  Video,
+  AlertTriangle,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,7 +36,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 const mockParticipants = [
   {
     id: "1",
-    name: "John Smith",
+    name: "John Doe",
     role: "tutor",
     avatar: "/placeholder.svg?height=40&width=40",
     isConnected: true,
@@ -32,7 +44,7 @@ const mockParticipants = [
   },
   {
     id: "2",
-    name: "Jane Doe",
+    name: "Jane Smith",
     role: "student",
     avatar: "/placeholder.svg?height=40&width=40",
     isConnected: true,
@@ -46,13 +58,21 @@ const mockParticipants = [
     isConnected: true,
     isSpeaking: false,
   },
+  {
+    id: "4",
+    name: "Sarah Johnson",
+    role: "student",
+    avatar: "/placeholder.svg?height=40&width=40",
+    isConnected: false,
+    isSpeaking: false,
+  },
 ]
 
 const chatSchema = z.object({
   message: z.string().min(1, { message: "Message cannot be empty" }),
 })
 
-export default function StudentVideoSessionPage() {
+export default function VideoSessionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("id") || "demo-session"
@@ -62,19 +82,19 @@ export default function StudentVideoSessionPage() {
   const [isJoined, setIsJoined] = useState(false)
   const [isMicOn, setIsMicOn] = useState(true)
   const [isCameraOn, setIsCameraOn] = useState(true)
-  const [isHandRaised, setIsHandRaised] = useState(false)
+  const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [participants, setParticipants] = useState(mockParticipants)
   const [chatMessages, setChatMessages] = useState([
     {
       id: "1",
-      sender: "John Smith",
+      sender: "John Doe",
       role: "tutor",
       message: "Welcome to the session! We'll be covering advanced JavaScript concepts today.",
       timestamp: new Date(Date.now() - 300000),
     },
     {
       id: "2",
-      sender: "Jane Doe",
+      sender: "Jane Smith",
       role: "student",
       message: "I'm excited to learn about promises and async/await!",
       timestamp: new Date(Date.now() - 240000),
@@ -88,13 +108,13 @@ export default function StudentVideoSessionPage() {
     },
     {
       id: "4",
-      sender: "John Smith",
+      sender: "John Doe",
       role: "tutor",
       message: "Yes, we'll definitely cover error handling with try/catch and promise rejection.",
       timestamp: new Date(Date.now() - 120000),
     },
   ])
-  const [showLeaveSessionDialog, setShowLeaveSessionDialog] = useState(false)
+  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false)
   const [showJoinDialog, setShowJoinDialog] = useState(true)
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [isCheckingDevices, setIsCheckingDevices] = useState(true)
@@ -246,8 +266,8 @@ export default function StudentVideoSessionPage() {
     }
 
     setIsJoined(false)
-    setShowLeaveSessionDialog(false)
-    router.push("/student/dashboard")
+    setShowEndSessionDialog(false)
+    router.push("/tutor/dashboard")
   }
 
   const toggleMic = () => {
@@ -268,21 +288,121 @@ export default function StudentVideoSessionPage() {
     }
   }
 
-  const toggleHandRaise = () => {
-    setIsHandRaised(!isHandRaised)
+  const toggleScreenShare = async () => {
+    if (!isScreenSharing) {
+      try {
+        // Stop current video track if it exists
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getVideoTracks().forEach((track) => track.stop())
+        }
+
+        // Get screen sharing stream
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+
+        // If we have an existing stream, add the screen track to it
+        if (mediaStreamRef.current) {
+          // Remove old video tracks
+          const audioTracks = mediaStreamRef.current.getAudioTracks()
+
+          // Create a new stream with audio from camera and video from screen
+          const newStream = new MediaStream()
+
+          // Add audio tracks from the original stream
+          audioTracks.forEach((track) => newStream.addTrack(track))
+
+          // Add video track from screen sharing
+          newStream.addTrack(screenStream.getVideoTracks()[0])
+
+          // Replace the stream
+          mediaStreamRef.current = newStream
+
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = newStream
+          }
+        } else {
+          // If no existing stream, just use the screen stream
+          mediaStreamRef.current = screenStream
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = screenStream
+          }
+        }
+
+        // Listen for the end of screen sharing
+        screenStream.getVideoTracks()[0].onended = () => {
+          setIsScreenSharing(false)
+          // Restore camera
+          restoreCamera()
+        }
+
+        setIsScreenSharing(true)
+      } catch (err) {
+        console.error("Error sharing screen:", err)
+        toast({
+          variant: "destructive",
+          title: "Screen sharing error",
+          description: "Could not share your screen. Please try again.",
+        })
+      }
+    } else {
+      // Stop screen sharing and restore camera
+      restoreCamera()
+      setIsScreenSharing(false)
+    }
+  }
+
+  const restoreCamera = async () => {
+    try {
+      // Stop current tracks
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getVideoTracks().forEach((track) => track.stop())
+      }
+
+      // Get new camera stream if camera is on
+      if (isCameraOn) {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: isMicOn,
+        })
+
+        // If we have an existing stream with audio, keep that audio
+        if (mediaStreamRef.current && mediaStreamRef.current.getAudioTracks().length > 0) {
+          const audioTracks = mediaStreamRef.current.getAudioTracks()
+
+          // Add the audio tracks to the new stream
+          audioTracks.forEach((track) => {
+            if (!newStream.getAudioTracks().includes(track)) {
+              newStream.addTrack(track)
+            }
+          })
+        }
+
+        mediaStreamRef.current = newStream
+
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = newStream
+        }
+      }
+    } catch (err) {
+      console.error("Error restoring camera:", err)
+      setCameraError("Failed to restore camera after screen sharing.")
+      setIsCameraOn(false)
+    }
+  }
+
+  const copySessionLink = () => {
+    const link = `${window.location.origin}/join-session?id=${sessionId}`
+    navigator.clipboard.writeText(link)
     toast({
-      title: isHandRaised ? "Hand lowered" : "Hand raised",
-      description: isHandRaised
-        ? "Your hand has been lowered."
-        : "Your hand has been raised. The tutor will see your request.",
+      title: "Link copied",
+      description: "Session link copied to clipboard.",
     })
   }
 
   const onSubmitChat = (values: z.infer<typeof chatSchema>) => {
     const newMessage = {
       id: Date.now().toString(),
-      sender: "Jane Doe", // Current user
-      role: "student",
+      sender: "John Doe", // Current user
+      role: "tutor",
       message: values.message,
       timestamp: new Date(),
     }
@@ -327,11 +447,11 @@ export default function StudentVideoSessionPage() {
       <div className="flex min-h-screen flex-col items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Session Left</CardTitle>
+            <CardTitle>Session Ended</CardTitle>
             <CardDescription>You have left the video session.</CardDescription>
           </CardHeader>
           <CardFooter>
-            <Button className="w-full" onClick={() => router.push("/student/dashboard")}>
+            <Button className="w-full" onClick={() => router.push("/tutor/dashboard")}>
               Return to Dashboard
             </Button>
           </CardFooter>
@@ -351,10 +471,22 @@ export default function StudentVideoSessionPage() {
             {sessionId}
           </Badge>
         </div>
-        <Button variant="destructive" size="sm" onClick={() => setShowLeaveSessionDialog(true)}>
-          <Phone className="mr-2 h-4 w-4" />
-          Leave Session
-        </Button>
+        <div className="flex items-center space-x-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="icon" onClick={copySessionLink}>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy session link</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Button variant="destructive" size="sm" onClick={() => setShowEndSessionDialog(true)}>
+            <Phone className="mr-2 h-4 w-4" />
+            End Session
+          </Button>
+        </div>
       </header>
 
       {/* Main content */}
@@ -375,28 +507,6 @@ export default function StudentVideoSessionPage() {
           )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Tutor video (always first and larger) */}
-            <div className="relative col-span-full aspect-video overflow-hidden rounded-lg bg-muted md:col-span-2">
-              <div className="flex h-full w-full items-center justify-center">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={participants[0].avatar || "/placeholder.svg"} alt={participants[0].name} />
-                  <AvatarFallback>{participants[0].name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              </div>
-              <div
-                className={`absolute inset-0 border-2 transition-colors ${
-                  participants[0].isSpeaking ? "border-primary" : "border-transparent"
-                }`}
-              ></div>
-              <div className="absolute bottom-2 left-2 flex items-center space-x-1 rounded-md bg-background/80 px-2 py-1 text-xs">
-                <Badge variant="default" className="text-xs">
-                  Tutor
-                </Badge>
-                <span>{participants[0].name}</span>
-                <Mic className="h-3 w-3" />
-              </div>
-            </div>
-
             {/* Local video */}
             <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
               <video
@@ -415,17 +525,17 @@ export default function StudentVideoSessionPage() {
                 </div>
               )}
               <div className="absolute bottom-2 left-2 flex items-center space-x-1 rounded-md bg-background/80 px-2 py-1 text-xs">
-                <Badge variant="outline" className="text-xs">
-                  You
+                <Badge variant={isScreenSharing ? "default" : "outline"} className="text-xs">
+                  {isScreenSharing ? "Screen" : "Camera"}
                 </Badge>
+                <span>You</span>
                 {isMicOn ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3 text-destructive" />}
-                {isHandRaised && <Hand className="h-3 w-3 text-yellow-500" />}
               </div>
             </div>
 
-            {/* Other students */}
+            {/* Remote videos */}
             {participants
-              .filter((p) => p.id !== "1" && p.id !== "2") // Filter out tutor and local user
+              .filter((p) => p.id !== "1" && p.isConnected) // Filter out local user and disconnected users
               .map((participant) => (
                 <div key={participant.id} className="relative aspect-video overflow-hidden rounded-lg bg-muted">
                   <div className="flex h-full w-full items-center justify-center">
@@ -441,7 +551,7 @@ export default function StudentVideoSessionPage() {
                   ></div>
                   <div className="absolute bottom-2 left-2 flex items-center space-x-1 rounded-md bg-background/80 px-2 py-1 text-xs">
                     <Badge variant="outline" className="text-xs">
-                      Student
+                      {participant.role}
                     </Badge>
                     <span>{participant.name}</span>
                     <Mic className="h-3 w-3" />
@@ -453,11 +563,11 @@ export default function StudentVideoSessionPage() {
 
         {/* Sidebar */}
         <div className="hidden w-80 flex-shrink-0 border-l md:block">
-          <Tabs defaultValue="chat">
+          <Tabs defaultValue="participants">
             <TabsList className="w-full justify-start rounded-none border-b">
               <TabsTrigger value="participants" className="flex-1">
                 <Users className="mr-2 h-4 w-4" />
-                Participants ({participants.length})
+                Participants ({participants.filter((p) => p.isConnected).length})
               </TabsTrigger>
               <TabsTrigger value="chat" className="flex-1">
                 Chat
@@ -487,13 +597,22 @@ export default function StudentVideoSessionPage() {
                               </Badge>
                             )}
                           </div>
-                          <Badge
-                            variant="outline"
-                            className={`text-xs ${participant.role === "tutor" ? "bg-primary/10" : "bg-muted"}`}
-                          >
-                            {participant.role}
-                          </Badge>
+                          <div className="flex items-center space-x-1">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs ${participant.role === "tutor" ? "bg-primary/10" : "bg-muted"}`}
+                            >
+                              {participant.role}
+                            </Badge>
+                            {!participant.isConnected && (
+                              <span className="text-xs text-muted-foreground">Disconnected</span>
+                            )}
+                          </div>
                         </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        <Mic className="h-4 w-4 text-muted-foreground" />
+                        <Camera className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </div>
                   ))}
@@ -557,7 +676,6 @@ export default function StudentVideoSessionPage() {
                 size="icon"
                 className="h-12 w-12 rounded-full"
                 onClick={toggleMic}
-                disabled={!hasMicrophonePermission}
               >
                 {isMicOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
               </Button>
@@ -587,15 +705,15 @@ export default function StudentVideoSessionPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={isHandRaised ? "default" : "outline"}
+                variant={isScreenSharing ? "default" : "outline"}
                 size="icon"
                 className="h-12 w-12 rounded-full"
-                onClick={toggleHandRaise}
+                onClick={toggleScreenShare}
               >
-                <Hand className="h-5 w-5" />
+                <MonitorUp className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{isHandRaised ? "Lower hand" : "Raise hand"}</TooltipContent>
+            <TooltipContent>{isScreenSharing ? "Stop sharing" : "Share screen"}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
@@ -606,31 +724,31 @@ export default function StudentVideoSessionPage() {
                 variant="destructive"
                 size="icon"
                 className="h-12 w-12 rounded-full"
-                onClick={() => setShowLeaveSessionDialog(true)}
+                onClick={() => setShowEndSessionDialog(true)}
               >
                 <PhoneOff className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Leave session</TooltipContent>
+            <TooltipContent>End session</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </footer>
 
-      {/* Leave Session Dialog */}
-      <Dialog open={showLeaveSessionDialog} onOpenChange={setShowLeaveSessionDialog}>
+      {/* End Session Dialog */}
+      <Dialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Leave Session</DialogTitle>
+            <DialogTitle>End Session</DialogTitle>
             <DialogDescription>
-              Are you sure you want to leave this session? You can rejoin later if the session is still active.
+              Are you sure you want to end this session? All participants will be disconnected.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setShowLeaveSessionDialog(false)}>
+            <Button variant="outline" onClick={() => setShowEndSessionDialog(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleLeaveSession}>
-              Leave Session
+              End Session
             </Button>
           </div>
         </DialogContent>
@@ -642,8 +760,8 @@ export default function StudentVideoSessionPage() {
           <DialogHeader>
             <DialogTitle>Join Video Session</DialogTitle>
             <DialogDescription>
-              You are about to join a {sessionType === "group" ? "group" : "one-on-one"} session with{" "}
-              {participants[0].name}. Please check your audio and video settings before joining.
+              You are about to join a {sessionType === "group" ? "group" : "one-on-one"} session. Please check your
+              audio and video settings before joining.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

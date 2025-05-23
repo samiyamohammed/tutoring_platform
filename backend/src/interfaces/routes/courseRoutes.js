@@ -11,6 +11,8 @@ const router = express.Router();
 router.get("/", courseController.getCourses);
 router.get("/tutor", courseController.getTutorCourses);
 router.get("/:id", courseController.getCourseById);
+router.post("/", courseController.create);
+
 
 // Updated module creation with proper file handling
 router.post('/:courseId/modules',
@@ -87,7 +89,6 @@ router.put('/:courseId/modules/:moduleId',
 router.delete('/:courseId/modules/:moduleId', courseController.deleteModule);
 router.put("/:id", authorize(['admin', 'tutor']), courseController.update);
 router.delete("/:id", authorize(['admin', 'tutor']), courseController.delete);
-router.post("/", authorize(['admin', 'tutor']), courseController.create);
 
 router.use("/module", moduleRoutes);
 

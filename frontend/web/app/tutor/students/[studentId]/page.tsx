@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -142,7 +143,9 @@ type Enrollment = {
   }
 }
 
-export default function StudentDetailsPage({ params }: { params: { id: string } }) {
+export default function StudentDetailsPage() {
+  const params = useParams()
+  const studentId = params.studentId as string
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -166,7 +169,7 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
 
         // Fetch enrollment with all populated data
         const enrollmentRes = await fetch(
-          `http://localhost:5000/api/enrollment/${params.id}?populate=student,course,progress.modules,progress.assessments`,
+          `http://localhost:5000/api/enrollment/${studentId}`,
           { headers }
         )
         if (!enrollmentRes.ok) throw new Error('Failed to fetch enrollment data')
@@ -182,7 +185,7 @@ export default function StudentDetailsPage({ params }: { params: { id: string } 
     }
 
     fetchEnrollment()
-  }, [params.id])
+  }, [studentId])
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return "N/A"

@@ -466,7 +466,7 @@ export default function TutorStudentsPage() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
-                            <Link href={`/tutor/courses/${enrollment.course._id}?student=${enrollment.student._id}`}>
+                            <Link href={`/tutor/students/${enrollment.course._id}?student=${enrollment.student._id}`}>
                               View Progress
                             </Link>
                           </DropdownMenuItem>

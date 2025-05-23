@@ -29,11 +29,31 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  role: string;
 }
 
 interface Course {
   _id: string;
   title: string;
+  description: string;
+  category: string;
+  level: string;
+  pricing: {
+    online?: {
+      schedule: any[];
+    };
+    group?: {
+      price: number;
+      maxStudents: number;
+      schedule: any[];
+    };
+    oneOnOne?: {
+      price: number;
+      maxStudents: number;
+      schedule: any[];
+    };
+  };
+  sessionTypes: string[];
 }
 
 interface Session {
@@ -41,13 +61,14 @@ interface Session {
   student: User;
   tutor: User;
   course: Course;
-  sessionType: "video" | "in-person";
+  sessionType: "video" | "in-person" | "group" | "oneOnOne";
   status: "pending" | "approved" | "declined" | "completed" | "cancelled";
   scheduledDate: string;
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
   videoConferenceLink?: string;
   notes?: string;
+  requestDate: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -68,24 +89,28 @@ export default function SessionsPage() {
     status: "all",
     type: "all",
     dateRange: "all",
+    sessionFormat: "all",
   });
 
   useEffect(() => {
-    console.log("Fetching sessions...");
     const fetchSessions = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get("/session/tutor");
-        console.log("API Response:", response);
+        const response = await fetch('http://localhost:5000/api/session/tutor', {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
 
-        if (response.error) {
-          console.error("API Error:", response.error);
-          throw new Error(response.error);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        setSessions(response.data || []);
-        setFilteredSessions(response.data || []);
-        console.log("Sessions data set successfully");
+        const data = await response.json();
+        setSessions(data);
+        setFilteredSessions(data);
       } catch (error) {
         console.error("Error fetching sessions:", error);
         toast({
@@ -103,7 +128,6 @@ export default function SessionsPage() {
   }, [toast]);
 
   useEffect(() => {
-    console.log("Applying filters and sorting...");
     let result = [...sessions];
 
     // Apply filters
@@ -112,7 +136,21 @@ export default function SessionsPage() {
     }
 
     if (filter.type !== "all") {
-      result = result.filter((session) => session.sessionType === filter.type);
+      result = result.filter((session) => {
+        if (filter.type === "video") return session.sessionType === "video";
+        if (filter.type === "in-person") return session.sessionType === "in-person";
+        if (filter.type === "group") return session.sessionType === "group";
+        if (filter.type === "oneOnOne") return session.sessionType === "oneOnOne";
+        return true;
+      });
+    }
+
+    if (filter.sessionFormat !== "all") {
+      result = result.filter((session) => {
+        if (filter.sessionFormat === "online") return session.sessionType === "video";
+        if (filter.sessionFormat === "in-person") return session.sessionType === "in-person";
+        return true;
+      });
     }
 
     if (filter.dateRange !== "all") {
@@ -140,12 +178,22 @@ export default function SessionsPage() {
     // Apply sorting
     if (sortConfig !== null) {
       result.sort((a, b) => {
-        // @ts-ignore
-        if (a[sortConfig.key] < b[sortConfig.key]) {
+        // Handle nested properties
+        let aValue: any, bValue: any;
+        
+        if (sortConfig.key.includes('.')) {
+          const keys = sortConfig.key.split('.');
+          aValue = keys.reduce((obj: any, key) => obj?.[key], a);
+          bValue = keys.reduce((obj: any, key) => obj?.[key], b);
+        } else {
+          aValue = a[sortConfig.key as keyof Session];
+          bValue = b[sortConfig.key as keyof Session];
+        }
+
+        if (aValue < bValue) {
           return sortConfig.direction === "ascending" ? -1 : 1;
         }
-        // @ts-ignore
-        if (a[sortConfig.key] > b[sortConfig.key]) {
+        if (aValue > bValue) {
           return sortConfig.direction === "ascending" ? 1 : -1;
         }
         return 0;
@@ -153,7 +201,6 @@ export default function SessionsPage() {
     }
 
     setFilteredSessions(result);
-    console.log("Filtered sessions:", result);
   }, [filter, sessions, sortConfig]);
 
   const requestSort = (key: string) => {
@@ -172,10 +219,8 @@ export default function SessionsPage() {
     id: string,
     status: "approved" | "declined" | "cancelled"
   ) => {
-    console.log(`Changing session ${id} status to ${status}`);
     try {
       const response = await apiClient.put(`/session/${id}`, { status });
-      console.log("Status change response:", response);
 
       if (response.error) {
         throw new Error(response.error);
@@ -201,10 +246,8 @@ export default function SessionsPage() {
   };
 
   const handleDeleteSession = async (id: string) => {
-    console.log(`Deleting session ${id}`);
     try {
       const response = await apiClient.delete(`/session/${id}`);
-      console.log("Delete response:", response);
 
       if (response.error) {
         throw new Error(response.error);
@@ -224,7 +267,6 @@ export default function SessionsPage() {
   };
 
   const handleStartSession = (session: Session) => {
-    console.log("Starting session:", session);
     if (session.sessionType === "video" && session.videoConferenceLink) {
       window.open(session.videoConferenceLink, "_blank");
     } else {
@@ -240,16 +282,22 @@ export default function SessionsPage() {
     });
   };
 
-  const formatTimeRange = (startTime: string, endTime: string) => {
-    return `${startTime} - ${endTime}`;
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
-  const calculateDuration = (startTime: string, endTime: string) => {
-    const [startHour, startMinute] = startTime.split(":").map(Number);
-    const [endHour, endMinute] = endTime.split(":").map(Number);
-    const durationMinutes =
-      endHour * 60 + endMinute - (startHour * 60 + startMinute);
-    return `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m`;
+  const formatTimeRange = (startDate: string, endDate: string) => {
+    return `${formatTime(startDate)} - ${formatTime(endDate)}`;
+  };
+
+  const calculateDuration = (startDate: string, endDate: string) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    return `${Math.floor(durationMinutes / 60)}h ${Math.round(durationMinutes % 60)}m`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -267,9 +315,19 @@ export default function SessionsPage() {
           statusClasses[status as keyof typeof statusClasses]
         }`}
       >
-        {status}
+        {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
+  };
+
+  const getSessionTypeDisplay = (type: string) => {
+    const typeMap: Record<string, string> = {
+      video: "Online",
+      "in-person": "In-Person",
+      group: "Group",
+      oneOnOne: "1-on-1"
+    };
+    return typeMap[type] || type;
   };
 
   const pendingRequests = sessions.filter(
@@ -328,48 +386,58 @@ export default function SessionsPage() {
               </TabsList>
             </Tabs>
 
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex space-x-2">
-                <select
-                  className="p-2 border rounded text-sm"
-                  value={filter.status}
-                  onChange={(e) =>
-                    setFilter({ ...filter, status: e.target.value })
-                  }
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="declined">Declined</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
+            <div className="flex flex-wrap gap-2 items-center mb-4">
+              <select
+                className="p-2 border rounded text-sm"
+                value={filter.status}
+                onChange={(e) =>
+                  setFilter({ ...filter, status: e.target.value })
+                }
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="declined">Declined</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
 
-                <select
-                  className="p-2 border rounded text-sm"
-                  value={filter.type}
-                  onChange={(e) =>
-                    setFilter({ ...filter, type: e.target.value })
-                  }
-                >
-                  <option value="all">All Types</option>
-                  <option value="video">Online</option>
-                  <option value="in-person">In-Person</option>
-                </select>
+              <select
+                className="p-2 border rounded text-sm"
+                value={filter.type}
+                onChange={(e) =>
+                  setFilter({ ...filter, type: e.target.value })
+                }
+              >
+                <option value="all">All Session Types</option>
+                <option value="group">Group</option>
+                <option value="oneOnOne">1-on-1</option>
+              </select>
 
-                <select
-                  className="p-2 border rounded text-sm"
-                  value={filter.dateRange}
-                  onChange={(e) =>
-                    setFilter({ ...filter, dateRange: e.target.value })
-                  }
-                >
-                  <option value="all">All Dates</option>
-                  <option value="upcoming">Upcoming</option>
-                  <option value="past">Past</option>
-                  <option value="today">Today</option>
-                </select>
-              </div>
+              <select
+                className="p-2 border rounded text-sm"
+                value={filter.sessionFormat}
+                onChange={(e) =>
+                  setFilter({ ...filter, sessionFormat: e.target.value })
+                }
+              >
+                <option value="all">All Formats</option>
+                <option value="online">Online</option>
+                <option value="in-person">In-Person</option>
+              </select>
+
+              <select
+                className="p-2 border rounded text-sm"
+                value={filter.dateRange}
+                onChange={(e) =>
+                  setFilter({ ...filter, dateRange: e.target.value })
+                }
+              >
+                <option value="all">All Dates</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+                <option value="today">Today</option>
+              </select>
             </div>
 
             {calendarView ? (
@@ -431,6 +499,7 @@ export default function SessionsPage() {
                           <TableHead>Time</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Type</TableHead>
+                          <TableHead>Format</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -443,21 +512,22 @@ export default function SessionsPage() {
                               {formatDate(request.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {formatTimeRange(
-                                request.startTime,
-                                request.endTime
+                              {request.startTime && request.endTime ? (
+                                formatTimeRange(request.startTime, request.endTime)
+                              ) : (
+                                formatTime(request.scheduledDate)
                               )}
                             </TableCell>
                             <TableCell>
-                              {calculateDuration(
-                                request.startTime,
-                                request.endTime
-                              )}
+                              {request.startTime && request.endTime ? (
+                                calculateDuration(request.startTime, request.endTime)
+                              ) : "N/A"}
                             </TableCell>
                             <TableCell>
-                              {request.sessionType === "video"
-                                ? "Online"
-                                : "In-Person"}
+                              {getSessionTypeDisplay(request.sessionType)}
+                            </TableCell>
+                            <TableCell>
+                              {request.sessionType === "video" ? "Online" : "In-Person"}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -539,6 +609,7 @@ export default function SessionsPage() {
                           <TableHead>Time</TableHead>
                           <TableHead>Duration</TableHead>
                           <TableHead>Type</TableHead>
+                          <TableHead>Format</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
@@ -552,21 +623,22 @@ export default function SessionsPage() {
                               {formatDate(session.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {formatTimeRange(
-                                session.startTime,
-                                session.endTime
+                              {session.startTime && session.endTime ? (
+                                formatTimeRange(session.startTime, session.endTime)
+                              ) : (
+                                formatTime(session.scheduledDate)
                               )}
                             </TableCell>
                             <TableCell>
-                              {calculateDuration(
-                                session.startTime,
-                                session.endTime
-                              )}
+                              {session.startTime && session.endTime ? (
+                                calculateDuration(session.startTime, session.endTime)
+                              ) : "N/A"}
                             </TableCell>
                             <TableCell>
-                              {session.sessionType === "video"
-                                ? "Online"
-                                : "In-Person"}
+                              {getSessionTypeDisplay(session.sessionType)}
+                            </TableCell>
+                            <TableCell>
+                              {session.sessionType === "video" ? "Online" : "In-Person"}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(session.status)}
