@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Link from 'next/link';
 import { useParams, useRouter } from "next/navigation"
 import { BookOpen, CheckCircle, Clock, FileText, ChevronLeft, ChevronRight, Video, File, ListChecks, Award, User, BarChart2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -13,6 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
+
+ import { generateCertificate } from '@/lib/pdfmonkey';
+
 
 interface Course {
   _id: string
@@ -108,8 +112,10 @@ interface Enrollment {
     issued: boolean
     issuedAt?: string
     certificateId?: string
+    certificateUrl?: string 
     expirationDate?: string
   }
+  course:Course
 }
 
 export default function CourseLearningPage() {
@@ -127,6 +133,10 @@ export default function CourseLearningPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
   const [timeSpentInterval, setTimeSpentInterval] = useState<NodeJS.Timeout | null>(null)
+
+  
+   const [certLoading, setCertLoading] = useState(false);
+  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -469,6 +479,121 @@ export default function CourseLearningPage() {
     }
   }
 
+
+// const useCertificateCheck = () => {
+//   const { toast } = useToast();
+  
+//   useEffect(() => {
+//     const checkCertificates = async () => {
+//       const token = localStorage.getItem("token");
+//       if (!token) return;
+
+//       try {
+//         const res = await fetch("http://localhost:5000/api/enrollment/mycourses", {
+//           headers: { Authorization: `Bearer ${token}` },
+//         });
+
+//         if (!res.ok) throw new Error("Failed to fetch enrollments");
+
+//         const mycourses = await res.json();
+
+//         for (const enrollment of mycourses) {
+//           const { _id: enrollmentId, progress, certification } = enrollment;
+//           const progressPercentage = progress?.completionPercentage || 0;
+//           const alreadyIssued = certification?.issued;
+
+//           if (progressPercentage === 100 && !alreadyIssued) {
+//             try {
+//               const { downloadUrl } = await generateCertificate(enrollment);
+              
+//               const updateRes = await fetch(
+//                 "http://localhost:5000/api/enrollment/status",
+//                 {
+//                   method: "PUT",
+//                   headers: {
+//                     "Content-Type": "application/json",
+//                     Authorization: `Bearer ${token}`,
+//                   },
+//                   body: JSON.stringify({
+//                     enrollmentId,
+//                     status: "completed",
+//                     certificateUrl: downloadUrl,
+//                   }),
+//                 }
+//               );
+
+//               if (!updateRes.ok) {
+//                 throw new Error("Failed to update enrollment status");
+//               }
+
+//               toast({
+//                 title: "Certificate Generated!",
+//                 description: "Your course certificate is now available.",
+//               });
+//             } catch (err) {
+//               console.error("Certificate process failed:", err);
+//               toast({
+//                 variant: "destructive",
+//                 title: "Certificate Error",
+//                 description: "Failed to generate certificate. Please try again later.",
+//               });
+//             }
+//           }
+//         }
+//       } catch (error) {
+//         console.error("Error checking certificates:", error);
+//       }
+//     };
+
+//     checkCertificates();
+//     const interval = setInterval(checkCertificates, 3600000); // 1 hour
+    
+//     return () => clearInterval(interval);
+//   }, [toast]);
+// };
+
+// // Call the hook in your component
+// useCertificateCheck();
+
+useEffect(() => {
+    const fetchEnrollment = async () => {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await fetch(`http://localhost:5000/api/enrollment/mycourses`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const courseEnrollment = data.find((e: Enrollment) => e.course._id === courseId);
+      setEnrollment(courseEnrollment);
+      setLoading(false);
+    };
+
+    fetchEnrollment();
+  }, [courseId]);
+
+  const handleGenerateCertificate = async () => {
+    if (!enrollment) return;
+    setCertLoading(true);
+    try {
+      const student = JSON.parse(localStorage.getItem('user') || '{}');
+      const downloadUrl = await generateCertificate({
+        student_name: student.name,
+        course_title: enrollment.course.title,
+        completion_date: new Date().toLocaleDateString(),
+      });
+
+      // Open certificate page with URL
+      router.push(`/student/certificate?url=${encodeURIComponent(downloadUrl)}`);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCertLoading(false);
+    }
+  };
+
+
+
+
   if (loading) {
     return (
       <SidebarProvider>
@@ -564,6 +689,7 @@ export default function CourseLearningPage() {
                   )}
                 </Badge>
               )}
+             
               <div className="flex items-center gap-2">
                 <Progress value={enrollment.progress.completionPercentage} className="h-2 w-32" />
                 <span className="text-sm">{Math.round(enrollment.progress.completionPercentage)}%</span>
@@ -999,6 +1125,47 @@ export default function CourseLearningPage() {
           </div>
         </div>
       </div>
+      {/* <div>
+        {enrollment.progress.completionPercentage === 100 && (
+          <div className="pt-8">
+            <Button asChild className="w-full">
+              <Link href={`/student/my-courses/${enrollment.course._id}/certificate`}>
+                View Certificate
+              </Link>
+            </Button>
+          </div>
+        )}
+      </div> */}
+      <div className="max-w-4xl mx-auto py-10 space-y-6">
+      <h1 className="text-3xl font-bold">{enrollment.course.title}</h1>
+      {/* <p className="text-muted-foreground">
+        {enrollment.course.category} - {enrollment.course.level}
+      </p> */}
+      <p className="text-sm">Instructor: {enrollment.course.tutor.name}</p>
+
+      <div>
+        <h2 className="text-xl font-semibold">Your Progress</h2>
+        <Progress value={enrollment.progress.completionPercentage} className="h-3" />
+        <p>{enrollment.progress.completionPercentage}% completed</p>
+      </div>
+
+      <div className="pt-6">
+        <Button
+          onClick={handleGenerateCertificate}
+          disabled={enrollment.progress.completionPercentage < 100 || certLoading}
+        >
+          {certLoading ? 'Generating...' : 'Get Certificate'}
+        </Button>
+      </div>
+
+      <div className="pt-6">
+        <Link href="/student/dashboard" className="text-blue-600 underline">
+          Back to Dashboard
+        </Link>
+      </div>
+    </div>
+
+
     </SidebarProvider>
   )
 }

@@ -21,6 +21,8 @@ import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Progress } from "@/components/ui/progress"
 
+ import { generateCertificate } from '@/lib/pdfmonkey';
+
 interface Course {
   _id: string
   title: string
@@ -200,6 +202,7 @@ export default function StudentDashboardPage() {
       </div>
     );
   }
+
 
   return (
     <SidebarProvider>
