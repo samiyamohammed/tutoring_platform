@@ -12,6 +12,7 @@ import {
   Search,
   Star,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,7 +21,189 @@ import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Progress } from "@/components/ui/progress"
 
+ import { generateCertificate } from '@/lib/pdfmonkey';
+
+interface Course {
+  _id: string
+  title: string
+  description: string
+  tutor: {
+    _id: string
+    name: string
+    email: string
+  }
+  pricing: {
+    online: {
+      price: number
+    }
+    group: {
+      price: number
+    }
+    oneOnOne: {
+      price: number
+    }
+  }
+  modules: Array<{
+    _id: string
+    title: string
+    sections: Array<{
+      _id: string
+      title: string
+    }>
+  }>
+}
+
+interface Enrollment {
+  _id: string
+  student: string
+  course: Course
+  currentStatus: 'enrolled' | 'in_progress' | 'completed' | 'dropped' | 'suspended'
+  progress: {
+    completionPercentage: number
+    timeSpentTotal: number
+    modules: Array<{
+      moduleId: string
+      status: 'not_started' | 'started' | 'completed'
+      timeSpent: number
+      sections: Array<{
+        sectionId: string
+        status: 'not_started' | 'in_progress' | 'completed'
+        timeSpent: number
+      }>
+    }>
+  }
+  certification?: {
+    eligible: boolean
+    issued: boolean
+    certificateId?: string
+  }
+  activityLog?: Array<{
+    action: string
+    details: any
+    timestamp: string
+  }>
+  enrollmentDate: string
+}
+
 export default function StudentDashboardPage() {
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    enrolledCourses: 0,
+    inProgressCourses: 0,
+    completedCourses: 0,
+    upcomingSessions: 0,
+    certificatesEarned: 0,
+    hoursStudied: 0,
+    hoursThisMonth: 0,
+    completedModules: 0,
+    completedSections: 0,
+  })
+  const [studentName, setStudentName] = useState('')
+
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      try {
+        // First fetch student info
+        const studentData = JSON.parse(localStorage.getItem('user') || '{}');
+        setStudentName(studentData.name || '');
+  
+        const token = localStorage.getItem('token');
+  
+        const enrollmentsRes = await fetch('http://localhost:5000/api/enrollment/mycourses', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+  
+        if (!enrollmentsRes.ok) {
+          console.error('Error fetching enrollments');
+          return;
+        }
+        
+        const fetchedEnrollments = await enrollmentsRes.json();
+        console.log('Fetched enrollments:', fetchedEnrollments); // Debug log
+        
+        setEnrollments(fetchedEnrollments);
+  
+        // Calculate stats based on the enrollment data
+        const enrolledCourses = fetchedEnrollments.length;
+        const inProgressCourses = fetchedEnrollments.filter(
+          (e: Enrollment) => e.currentStatus === 'in_progress'
+        ).length;
+        const completedCourses = fetchedEnrollments.filter(
+          (e: Enrollment) => e.currentStatus === 'completed'
+        ).length;
+        const certificatesEarned = fetchedEnrollments.filter(
+          (e: Enrollment) => e.certification?.issued
+        ).length;
+        
+        // Calculate time spent in hours
+        const hoursStudied = Math.round(
+          fetchedEnrollments.reduce((acc: number, e: Enrollment) =>
+            acc + (e.progress?.timeSpentTotal || 0), 0) / 3600
+        );
+        
+        // Calculate time spent this month
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const hoursThisMonth = Math.round(
+          fetchedEnrollments.reduce((acc: number, e: Enrollment) => {
+            const enrollmentDate = new Date(e.enrollmentDate);
+            if (enrollmentDate.getMonth() === currentMonth && enrollmentDate.getFullYear() === currentYear) {
+              return acc + (e.progress?.timeSpentTotal || 0) / 3600;
+            }
+            return acc;
+          }, 0)
+        );
+        
+        // Calculate completed modules and sections
+        const completedModules = fetchedEnrollments.reduce((acc: number, e: Enrollment) => 
+          acc + (e.progress?.modules?.filter((m: { status: string }) => m.status === 'completed').length || 0), 0);
+        
+        const completedSections = fetchedEnrollments.reduce((acc: number, e: Enrollment) => 
+          acc + (e.progress?.modules?.reduce((modAcc: number, mod: Enrollment['progress']['modules'][number]) => 
+            modAcc + (mod.sections?.filter((s: Enrollment['progress']['modules'][number]['sections'][number]) => s.status === 'completed').length || 0), 0) || 0), 0);
+
+        setStats({
+          enrolledCourses,
+          inProgressCourses,
+          completedCourses,
+          upcomingSessions: 0, // You'll need to implement this based on activityLog
+          certificatesEarned,
+          hoursStudied,
+          hoursThisMonth,
+          completedModules,
+          completedSections
+        });
+      } catch (error) {
+        console.error("Failed to fetch student data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchStudentData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Loading dashboard...</div>
+      </div>
+    );
+  }
+  
+  if (!Array.isArray(enrollments)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div>Error loading enrollments data</div>
+      </div>
+    );
+  }
+
+
   return (
     <SidebarProvider>
       <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
@@ -29,7 +212,7 @@ export default function StudentDashboardPage() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, Jane Doe</p>
+              <p className="text-sm text-muted-foreground">Welcome back, {studentName}</p>
             </div>
             <Button asChild>
               <Link href="/student/explore">
@@ -46,18 +229,22 @@ export default function StudentDashboardPage() {
                   <BookOpen className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">4</div>
-                  <p className="text-xs text-muted-foreground">2 in progress, 2 completed</p>
+                  <div className="text-2xl font-bold">{stats.enrolledCourses}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.inProgressCourses} in progress, {stats.completedCourses} completed
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Upcoming Sessions</CardTitle>
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Learning Progress</CardTitle>
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-muted-foreground">Next: Today at 4:00 PM</p>
+                  <div className="text-2xl font-bold">{stats.completedModules} modules</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.completedSections} sections completed
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -66,8 +253,10 @@ export default function StudentDashboardPage() {
                   <GraduationCap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2</div>
-                  <p className="text-xs text-muted-foreground">Latest: Web Development Fundamentals</p>
+                  <div className="text-2xl font-bold">{stats.certificatesEarned}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.certificatesEarned > 0 ? "View your certificates" : "Complete courses to earn certificates"}
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -76,8 +265,10 @@ export default function StudentDashboardPage() {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">42</div>
-                  <p className="text-xs text-muted-foreground">This month: 18 hours</p>
+                  <div className="text-2xl font-bold">{stats.hoursStudied}</div>
+                  <p className="text-xs text-muted-foreground">
+                    This month: {stats.hoursThisMonth} hours
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -89,73 +280,77 @@ export default function StudentDashboardPage() {
                 <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
               </TabsList>
               <TabsContent value="courses" className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {[
-                    {
-                      title: "Advanced JavaScript",
-                      progress: 75,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "John Smith",
-                      nextSession: "Tomorrow, 2:00 PM",
-                    },
-                    {
-                      title: "UI/UX Design Principles",
-                      progress: 45,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "Sarah Johnson",
-                      nextSession: "Friday, 10:00 AM",
-                    },
-                    {
-                      title: "Python for Data Science",
-                      progress: 20,
-                      image: "/placeholder.svg?height=100&width=200",
-                      tutor: "Michael Brown",
-                      nextSession: "Monday, 3:00 PM",
-                    },
-                  ].map((course, i) => (
-                    <Card key={i}>
-                      <CardHeader className="p-0">
-                        <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                          <img
-                            src={course.image || "/placeholder.svg"}
-                            alt={course.title}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="p-4">
-                        <div className="space-y-2">
-                          <CardTitle className="line-clamp-1">{course.title}</CardTitle>
-                          <div className="flex items-center justify-between text-sm text-muted-foreground">
-                            <span>Tutor: {course.tutor}</span>
-                            <div className="flex items-center">
-                              <Star className="mr-1 h-4 w-4 fill-primary text-primary" />
-                              <span>4.8</span>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Progress</span>
-                              <span>{course.progress}%</span>
-                            </div>
-                            <Progress value={course.progress} className="h-2" />
-                          </div>
-                          <div className="text-sm text-muted-foreground">Next session: {course.nextSession}</div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="p-4 pt-0">
-                        <Button variant="outline" className="w-full" asChild>
-                          <Link href={`/student/my-courses/${i + 1}`}>Continue Learning</Link>
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-                <div className="flex justify-center">
-                  <Button variant="outline" asChild>
-                    <Link href="/student/my-courses">View All Courses</Link>
-                  </Button>
-                </div>
+                {enrollments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                    <p className="text-lg font-medium mb-2">No courses enrolled yet</p>
+                    <p className="text-muted-foreground mb-4">Explore our courses to get started</p>
+                    <Button asChild>
+                      <Link href="/student/explore">Browse Courses</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {enrollments.map((enrollment) => {
+                        const course = enrollment.course
+                        const completedModules = enrollment.progress?.modules?.filter(m => m.status === 'completed').length || 0
+                        const totalModules = course.modules?.length || 0
+
+                        return (
+                          <Card key={enrollment._id}>
+                            <CardHeader className="p-0">
+                              <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-muted">
+                                <div className="flex items-center justify-center h-full">
+                                  <BookOpen className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-4">
+                              <div className="space-y-2">
+                                <CardTitle className="line-clamp-1">{course.title}</CardTitle>
+                                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                  {/* <span>Tutor: {course.tutor.name}</span> */}
+                                  <div className="flex items-center">
+                                    <span>${course.pricing.online.price}</span>
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span>Progress</span>
+                                    <span>{enrollment.progress.completionPercentage}%</span>
+                                  </div>
+                                  <Progress
+                                    value={enrollment.progress.completionPercentage}
+                                    className="h-2"
+                                  />
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Modules: {completedModules}/{totalModules}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Status: {enrollment.currentStatus.replace('_', ' ')}
+                                </div>
+                              </div>
+                            </CardContent>
+                            <CardFooter className="p-4 pt-0">
+                              <Button variant="outline" className="w-full" asChild>
+                                <Link href={`/student/course/${course._id}`}>
+                                  {enrollment.currentStatus === 'completed' ? 'View Course' : 'Continue Learning'}
+                                </Link>
+                              </Button>
+                            </CardFooter>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                    <div className="flex justify-center">
+                      <Button variant="outline" asChild>
+                        <Link href="/student/my-courses">View All Courses</Link>
+                      </Button>
+                    </div>
+                  </>
+                )}
               </TabsContent>
               <TabsContent value="progress" className="space-y-4">
                 <Card>
@@ -172,35 +367,54 @@ export default function StudentDashboardPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card>
                     <CardHeader>
-                      <CardTitle>Assessment Scores</CardTitle>
-                      <CardDescription>Your performance in course assessments</CardDescription>
+                      <CardTitle>Time Spent</CardTitle>
+                      <CardDescription>Your learning activity across courses</CardDescription>
                     </CardHeader>
-                    <CardContent className="pl-2">
-                      <div className="h-[200px] w-full flex items-center justify-center bg-muted/20 rounded-md">
-                        <BarChart3 className="h-16 w-16 text-muted-foreground" />
+                    <CardContent>
+                      <div className="space-y-4">
+                        {enrollments.map((enrollment) => {
+                          const course = enrollment.course
+                          const hours = Math.round(enrollment.progress.timeSpentTotal / 3600)
+                          return (
+                            <div key={enrollment._id} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span>{course.title}</span>
+                                <span>{hours} hours</span>
+                              </div>
+                              <Progress
+                                value={Math.min(hours, 100)}
+                                className="h-2 bg-primary"
+                              />
+                            </div>
+                          )
+                        })}
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Learning Goals</CardTitle>
-                      <CardDescription>Track your progress towards your learning goals</CardDescription>
+                      <CardTitle>Course Completion</CardTitle>
+                      <CardDescription>Your progress towards completing courses</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        {[
-                          { goal: "Complete JavaScript Course", progress: 75 },
-                          { goal: "Finish 5 Programming Projects", progress: 40 },
-                          { goal: "Study 50 Hours This Month", progress: 60 },
-                        ].map((goal, i) => (
-                          <div key={i} className="space-y-1">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>{goal.goal}</span>
-                              <span>{goal.progress}%</span>
+                        {enrollments.map((enrollment) => {
+                          const course = enrollment.course
+                          return (
+                            <div key={enrollment._id} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span>{course.title}</span>
+                                <span>{enrollment.progress.completionPercentage}%</span>
+                              </div>
+                              <Progress
+                                value={enrollment.progress.completionPercentage}
+                                className={`h-2 ${enrollment.currentStatus === 'completed' ?
+                                    'bg-green-500' : 'bg-primary'
+                                  }`}
+                              />
                             </div>
-                            <Progress value={goal.progress} className="h-2" />
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -213,39 +427,10 @@ export default function StudentDashboardPage() {
                     <CardDescription>Your scheduled sessions for the next 7 days</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {[
-                        {
-                          title: "Advanced JavaScript - Group Session",
-                          time: "Today, 4:00 PM - 6:00 PM",
-                          tutor: "John Smith",
-                        },
-                        {
-                          title: "UI/UX Design - One-on-One Session",
-                          time: "Tomorrow, 2:00 PM - 3:00 PM",
-                          tutor: "Sarah Johnson",
-                        },
-                        {
-                          title: "Python for Data Science - Group Session",
-                          time: "Friday, 10:00 AM - 12:00 PM",
-                          tutor: "Michael Brown",
-                        },
-                      ].map((session, i) => (
-                        <div key={i} className="flex items-center">
-                          <div className="flex items-center justify-center rounded-md border p-2 mr-4">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium leading-none">{session.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {session.time} • {session.tutor}
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="sm">
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="flex flex-col items-center justify-center py-12">
+                      <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-lg font-medium mb-2">No upcoming sessions</p>
+                      <p className="text-muted-foreground">Your scheduled sessions will appear here</p>
                     </div>
                   </CardContent>
                   <CardFooter>
@@ -265,29 +450,29 @@ export default function StudentDashboardPage() {
                     <div className="space-y-4">
                       {[
                         {
-                          title: "React.js for Beginners",
-                          tutor: "John Smith",
-                          rating: 4.9,
-                          students: 1245,
+                          title: "Advanced Web Development",
+                          tutor: "Alex Johnson",
+                          rating: 4.8,
+                          students: 850,
+                          price: "$59.99",
+                        },
+                        {
+                          title: "JavaScript Frameworks",
+                          tutor: "Maria Garcia",
+                          rating: 4.7,
+                          students: 720,
                           price: "$49.99",
                         },
                         {
-                          title: "Advanced CSS and Sass",
-                          tutor: "Sarah Johnson",
-                          rating: 4.8,
-                          students: 987,
-                          price: "$39.99",
-                        },
-                        {
-                          title: "Machine Learning Fundamentals",
-                          tutor: "Michael Brown",
-                          rating: 4.7,
-                          students: 1532,
-                          price: "$59.99",
+                          title: "Backend Development",
+                          tutor: "David Kim",
+                          rating: 4.9,
+                          students: 930,
+                          price: "$69.99",
                         },
                       ].map((course, i) => (
                         <div key={i} className="flex items-center">
-                          <div className="h-16 w-16 rounded-md overflow-hidden mr-4">
+                          <div className="h-16 w-16 rounded-md overflow-hidden mr-4 bg-muted">
                             <img
                               src={`/placeholder.svg?height=64&width=64&text=${i + 1}`}
                               alt={course.title}
@@ -301,7 +486,9 @@ export default function StudentDashboardPage() {
                             </p>
                             <p className="text-sm font-medium">{course.price}</p>
                           </div>
-                          <Button size="sm">Enroll</Button>
+                          <Button size="sm" asChild>
+                            <Link href={`/student/explore/${i + 1}`}>Enroll</Link>
+                          </Button>
                         </div>
                       ))}
                     </div>

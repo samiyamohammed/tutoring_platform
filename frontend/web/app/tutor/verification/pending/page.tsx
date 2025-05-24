@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { Clock, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,49 +18,138 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 
+interface VerificationDocument {
+  name: string
+  url: string  // Changed from 'url' to 'id' since the backend uses file ID
+}
+
+interface TutorData {
+  _id: string // Add the user ID property
+  verification_status: "pending" | "requested" | "approved" | "rejected"
+  verification_documents: VerificationDocument[]
+}
+
 export default function TutorVerificationPendingPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleCancelRequest = async () => {
-    try {
-      // This would be replaced with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+  const [tutorData, setTutorData] = useState<TutorData | null>(null)
+  const [selectedDoc, setSelectedDoc] = useState<VerificationDocument | null>(null)
+  const [isLoadingDoc, setIsLoadingDoc] = useState(false)
 
-      toast({
-        title: "Request cancelled",
-        description: "Your verification request has been cancelled.",
+  useEffect(() => {
+    const fetchTutorData = async () => {
+      try {
+        const token = localStorage.getItem("token"); // Replace "token" with the actual key used to store the token
+
+        const res = await fetch("http://localhost:5000/api/users/profile", {
+          method: "GET", // Use the appropriate method (GET, POST, etc.)
+          headers: {
+            "Authorization": `Bearer ${token}`, // Include the token in the Authorization header
+          },
+          cache: "no-store"
+        });
+        if (!res.ok) throw new Error("Failed to fetch tutor data")
+        const data = await res.json()
+        setTutorData(data)
+      } catch (error) {
+        console.error(error)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load verification data.",
+        })
+      }
+    }
+
+    fetchTutorData()
+  }, [toast])
+
+  const handleCancelRequest = async () => {
+    const token = localStorage.getItem("token"); // Retrieve the token from local storage
+    const userId = tutorData?._id; // Assuming you have the user ID from the fetched data
+
+    if (!userId) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Tutor ID is missing. Please try again.",
+        });
+        return;
+    }
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/users/${userId}`, {
+            method: "PUT", // Use PUT request to update data
+            headers: {
+                "Authorization": `Bearer ${token}`, // Include the token in the Authorization header
+                "Content-Type": "application/json", // Specify that we're sending JSON data
+            },
+            body: JSON.stringify({ verification_status: "initial" }), // Send the updated status
+        });
+
+        if (!res.ok) {
+            const errorData = await res.json(); // Get error details from response body
+            throw new Error(errorData.message || "Network response was not ok");
+        }
+
+        toast({
+            title: "Request Updated",
+            description: "Your verification status has been set to requested.",
+        });
+        router.push("/tutor/documents");
+    } catch (error) {
+        console.error("Error updating verification status:", error); // Log the error for debugging
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: error instanceof Error ? error.message : "Failed to update verification status. Please try again.",
+        });
+    }
+}
+
+
+  const handlePreviewDocument = async (doc: VerificationDocument) => {
+    try {
+      setIsLoadingDoc(true)
+      
+      // Fetch document by its ID using the API endpoint
+      const res = await fetch(`http://localhost:5000/${doc.url}`, {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`, // Use the token for authorization if needed
+        },
       })
 
-      // Redirect to verification page
-      router.push("/tutor/verification")
+      if (!res.ok) {
+        throw new Error("Failed to fetch document")
+      }
+
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+
+      setSelectedDoc({
+        name: doc.name,
+        url: blobUrl,
+      })
     } catch (error) {
+      console.error(error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to cancel verification request. Please try again.",
+        description: "Failed to load document preview.",
       })
+    } finally {
+      setIsLoadingDoc(false)
     }
   }
 
-  // Mock document data
-  const documents = [
-    {
-      name: "ID_Card.pdf",
-      size: "1.2 MB",
-      uploadedAt: "2023-04-15T10:30:00Z",
-    },
-    {
-      name: "Teaching_Certificate.pdf",
-      size: "2.5 MB",
-      uploadedAt: "2023-04-15T10:32:00Z",
-    },
-    {
-      name: "Masters_Degree.pdf",
-      size: "3.1 MB",
-      uploadedAt: "2023-04-15T10:35:00Z",
-    },
-  ]
+  if (!tutorData) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <p>Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -93,41 +183,56 @@ export default function TutorVerificationPendingPage() {
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Submitted Documents</h3>
               <div className="rounded-lg border">
-                {documents.map((doc, index) => (
+                {tutorData.verification_documents.map((doc, index) => (
                   <div
                     key={index}
-                    className={`flex items-center justify-between p-3 ${
-                      index !== documents.length - 1 ? "border-b" : ""
-                    }`}
+                    className={`flex items-center justify-between p-3 ${index !== tutorData.verification_documents.length - 1 ? "border-b" : ""
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <FileText className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm font-medium">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {doc.size} • {new Date(doc.uploadedAt).toLocaleDateString()}
-                        </p>
                       </div>
                     </div>
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePreviewDocument(doc)}
+                        >
                           Preview
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-4xl">
                         <DialogHeader>
-                          <DialogTitle>{doc.name}</DialogTitle>
-                          <DialogDescription>
-                            Uploaded on {new Date(doc.uploadedAt).toLocaleDateString()}
-                          </DialogDescription>
+                          <DialogTitle>{selectedDoc?.name}</DialogTitle>
+                          <DialogDescription>Preview document</DialogDescription>
                         </DialogHeader>
-                        <div className="flex items-center justify-center border rounded-lg p-8 bg-muted/50">
-                          <FileText className="h-16 w-16 text-muted-foreground" />
+                        <div className="flex items-center justify-center border rounded-lg p-4 bg-muted/50 h-[70vh]">
+                          {isLoadingDoc ? (
+                            <p>Loading document...</p>
+                          ) : selectedDoc ? (
+                            <iframe
+                              src={selectedDoc.url}
+                              className="w-full h-full rounded-lg"
+                              frameBorder="0"
+                              title={selectedDoc.name}
+                            />
+                          ) : (
+                            <p>No document selected.</p>
+                          )}
                         </div>
-                        <DialogFooter>
-                          <Button variant="outline">Download</Button>
-                        </DialogFooter>
+                        {selectedDoc && (
+                          <DialogFooter>
+                            <a href={selectedDoc.url} download={selectedDoc.name} target="_blank" rel="noopener noreferrer">
+                              <Button variant="outline">
+                                Download
+                              </Button>
+                            </a>
+                          </DialogFooter>
+                        )}
                       </DialogContent>
                     </Dialog>
                   </div>

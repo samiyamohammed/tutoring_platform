@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Download File</title>
+</head>
+<body>
+  <h1>Download File from GridFS</h1>
+
+  <form id="downloadForm" action="/api/files/INSERT_FILE_ID_HERE" method="get">
+    <button type="submit">Download File</button>
+  </form>
+
+  <script>
+    // Optional: handle form submission dynamically
+    // Replace this ID with the actual one dynamically if needed
+    const fileId = '680b620c7211b272364dec59';
+    document.getElementById('downloadForm').action = `http://localhost:5000/api/files/${fileId}`;
+  </script>
+</body>
+</html>

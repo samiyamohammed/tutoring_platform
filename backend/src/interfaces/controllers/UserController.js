@@ -1,4 +1,6 @@
 import UserService from "../../application/services/UserService.js";
+import User from "../../domain/models/User.js";
+
 
 class UserController {
   // Get user profile (accessible by all users)
@@ -86,16 +88,35 @@ class UserController {
   async updateUser(req, res) {
     const userId = req.params.id;
     const updateData = req.body;
+    console.log("Update Data:", updateData);
+  
     try {
-      const updatedUser = await UserService.updateUser(userId, updateData);
-      if (!updatedUser) {
+      // Fetch the tutor before updating
+      const tutor = await User.findById(userId);
+
+      if (!tutor) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.status(200).json(updatedUser);
+
+      // If files were uploaded, append them to verification_documents
+      if (req.uploadedDocuments && req.uploadedDocuments.length > 0) {
+        tutor.verification_documents.push(...req.uploadedDocuments);
+      }
+
+      // Apply the updateData directly to tutor
+      Object.assign(tutor, updateData);
+
+      // Save tutor with the updated information
+      const updatedTutor = await tutor.save();
+
+      return res.status(200).json(updatedTutor);
     } catch (error) {
+      console.error('Update error:', error);
       res.status(400).json({ message: error.message });
     }
-  }
+}
+
+  
 
   // Delete a user (admin only)
   async deleteUser(req, res) {

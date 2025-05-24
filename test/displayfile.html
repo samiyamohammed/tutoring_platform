@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        #file-display {
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        video,
+        embed {
+            width: 100%;
+            height: 500px;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 500px;
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 8px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input {
+            padding: 8px;
+            width: 300px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>File Viewer</h1>
+    <div class="controls">
+        <input type="text" id="fileId" placeholder="Enter file ID">
+        <button onclick="loadFile()">Load File</button>
+    </div>
+
+    <div class="container">
+        <div id="file-display"></div>
+    </div>
+
+    <script>
+        async function loadFile() {
+            const fileId = document.getElementById('fileId').value.trim();
+            if (!fileId) {
+                alert('Please enter a file ID');
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:5000/api/course/files/${fileId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDY0ZGFmNjljNWNiNTIxNWU3MWRlMCIsInJvbGUiOiJ0dXRvciIsImlhdCI6MTc0NTQxODc4NywiZXhwIjoxNzQ2MDIzNTg3fQ.OT0xKrfyZQQY8noVeVhpWkJJp7Y9hxTkdzs5Ik-VK5E'
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('File not found');
+                }
+
+                const contentType = response.headers.get('content-type');
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'file';
+
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+
+                const fileDisplay = document.getElementById('file-display');
+                fileDisplay.innerHTML = '';
+
+                if (contentType.includes('image')) {
+                    // Display images
+                    const img = document.createElement('img');
+                    img.src = `/files/${fileId}`;
+                    fileDisplay.appendChild(img);
+                }
+                else if (contentType.includes('video')) {
+                    // Display videos
+                    const video = document.createElement('video');
+                    video.controls = true;
+                    video.src = `/files/${fileId}`;
+                    fileDisplay.appendChild(video);
+                }
+                else if (contentType.includes('pdf')) {
+                    // Display PDFs
+                    const embed = document.createElement('embed');
+                    embed.src = `/files/${fileId}`;
+                    embed.type = 'application/pdf';
+                    fileDisplay.appendChild(embed);
+                }
+                else if (contentType.includes('text')) {
+                    // Display text files
+                    const text = document.createElement('pre');
+                    const textContent = await response.text();
+                    text.textContent = textContent;
+                    fileDisplay.appendChild(text);
+                }
+                else {
+                    // Download other file types
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    a.textContent = `Download ${filename}`;
+                    fileDisplay.appendChild(a);
+                }
+            } catch (error) {
+                document.getElementById('file-display').innerHTML = `
+                    <p style="color: red;">Error: ${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -128,11 +128,7 @@ const EditButton = styled.TouchableOpacity`
 `;
 
 const MenuContainer = styled.View`
-<<<<<<< HEAD
   margin-top: 70px; 
-=======
-  margin-top: 70px;
->>>>>>> cdba7a38dbc4e26b7100f559e40f8964dc0acfb4
 `;
 
 const MenuItem = styled.TouchableOpacity`
