@@ -120,6 +120,9 @@ export default function TutorStudentsPage() {
     direction: 'descending'
   })
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+    
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -140,7 +143,7 @@ export default function TutorStudentsPage() {
         const tutorId = JSON.parse(localStorage.getItem('user') || '{}')._id
         // Fetch all enrollments with populated student and course data
         const enrollmentsRes = await fetch(
-          `http://localhost:5000/api/enrollment/tutor`,
+          `${baseUrl}/api/enrollment/tutor`,
           { headers }
         )
         if (!enrollmentsRes.ok) throw new Error('Failed to fetch enrollments')

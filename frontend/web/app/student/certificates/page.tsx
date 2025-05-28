@@ -1,84 +1,125 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Award, Download, ExternalLink, Search } from "lucide-react"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Award, Download, ExternalLink, Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
-import { StudentSidebar } from "@/components/student-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { StudentSidebar } from "@/components/student-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Mock data for certificates
-const mockCertificates = [
-  {
-    id: "1",
-    courseTitle: "Advanced JavaScript Programming",
-    issueDate: "2023-04-15",
-    grade: "A",
-    score: 95,
-    tutor: "John Smith",
-    status: "issued",
-    templateId: "1",
-  },
-  {
-    id: "2",
-    courseTitle: "UI/UX Design Principles",
-    issueDate: "2023-03-22",
-    grade: "A-",
-    score: 92,
-    tutor: "Sarah Johnson",
-    status: "issued",
-    templateId: "2",
-  },
-  {
-    id: "3",
-    courseTitle: "Machine Learning Fundamentals",
-    issueDate: null,
-    grade: null,
-    score: null,
-    tutor: "Jennifer Lee",
-    status: "pending",
-    progress: 85,
-    templateId: null,
-  },
-]
+interface Enrollment {
+  _id: string;
+  course: {
+    _id: string;
+    title: string;
+  };
+  currentStatus: string;
+  certification?: {
+    eligible: boolean;
+    issued: boolean;
+    issuedAt: string;
+    certificateId: string;
+    downloadUrl: string;
+    expirationDate: string;
+  };
+  progress: {
+    completionPercentage: number;
+  };
+  tutor: {
+    name: string;
+  };
+  actualCompletionDate?: string;
+}
+
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 export default function StudentCertificatesPage() {
-  const { toast } = useToast()
-  const [searchQuery, setSearchQuery] = useState("")
-  const [certificates, setCertificates] = useState(mockCertificates)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const issuedCertificates = certificates.filter((cert) => cert.status === "issued")
-  const pendingCertificates = certificates.filter((cert) => cert.status === "pending")
+  useEffect(() => {
+    const fetchCertificates = async () => {
+      try {
+        const token = localStorage.getItem("token") || "";
+        const response = await fetch("${baseUrl}/api/enrollment/mycourses", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-  const filteredIssuedCertificates = issuedCertificates.filter((cert) =>
-    cert.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+        if (!response.ok) {
+          throw new Error("Failed to fetch certificates");
+        }
 
-  const filteredPendingCertificates = pendingCertificates.filter((cert) =>
-    cert.courseTitle.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+        const data = await response.json();
+        setEnrollments(data);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to load certificates"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleDownload = (certificateId: string) => {
-    // In a real app, this would download the certificate
-    toast({
-      title: "Certificate downloaded",
-      description: "Your certificate has been downloaded successfully.",
-    })
-  }
+    fetchCertificates();
+  }, [toast]);
+
+  const issuedCertificates = enrollments.filter((e) => e.certification?.issued);
+  const filteredCertificates = issuedCertificates.filter((e) =>
+    e.course.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleDownload = (url: string) => {
+    window.open(`${baseUrl}${url}`, "_blank");
+    toast.success("Your certificate has been downloaded successfully.");
+  };
 
   const handleShare = (certificateId: string) => {
-    // In a real app, this would generate a shareable link
-    navigator.clipboard.writeText(`https://educonnect.example/certificates/${certificateId}`)
-    toast({
-      title: "Link copied to clipboard",
-      description: "Share this link to showcase your certificate.",
-    })
+    navigator.clipboard.writeText(
+      `https://educonnect.example/certificates/${certificateId}`
+    );
+    toast.message("Share this link to showcase your certificate.");
+  };
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <div className="grid min-h-screen w-full md:grid-cols-[auto_1fr]">
+          <StudentSidebar />
+          <main className="flex flex-col">
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h1 className="text-lg font-semibold">My Certificates</h1>
+                <p className="text-sm text-muted-foreground">
+                  View and manage your course completion certificates
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 p-8 pt-6">
+              <Skeleton className="h-10 w-80 mb-4" />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                  <Skeleton key={i} className="h-96 w-full" />
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
   }
 
   return (
@@ -88,12 +129,14 @@ export default function StudentCertificatesPage() {
         <main className="flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
-              <h1 className="text-lg font-semibold">My Certificates</h1>
-              <p className="text-sm text-muted-foreground">View and manage your course completion certificates</p>
+              <h1 className="text-xl font-semibold">My Certificates</h1>
+              <p className="text-sm text-muted-foreground">
+                View and manage your issued course completion certificates.
+              </p>
             </div>
           </div>
           <div className="flex-1 p-8 pt-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -105,156 +148,112 @@ export default function StudentCertificatesPage() {
               </div>
             </div>
 
-            <div className="mt-6">
-              <Tabs defaultValue="issued" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="issued">Issued Certificates ({issuedCertificates.length})</TabsTrigger>
-                  <TabsTrigger value="pending">Pending Certificates ({pendingCertificates.length})</TabsTrigger>
-                </TabsList>
-                <TabsContent value="issued">
-                  {filteredIssuedCertificates.length === 0 ? (
-                    <EmptyCertificates type="issued" searchQuery={searchQuery} />
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {filteredIssuedCertificates
-                        .filter((certificate): certificate is IssuedCertificate => certificate.issueDate !== null)
-                        .map((certificate) => (
-                          <IssuedCertificateCard
-                            key={certificate.id}
-                            certificate={certificate}
-                            onDownload={handleDownload}
-                            onShare={handleShare}
-                          />
-                        ))}
-                    </div>
-                  )}
-                </TabsContent>
-                <TabsContent value="pending">
-                  {filteredPendingCertificates.length === 0 ? (
-                    <EmptyCertificates type="pending" searchQuery={searchQuery} />
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {filteredPendingCertificates
-                        .filter((certificate) => certificate.progress !== undefined)
-                        .map((certificate) => (
-                          <PendingCertificateCard key={certificate.id} certificate={certificate as PendingCertificate} />
-                        ))}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
+            {filteredCertificates.length === 0 ? (
+              <EmptyCertificates searchQuery={searchQuery} />
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredCertificates.map((enrollment) => (
+                  <IssuedCertificateCard
+                    key={enrollment._id}
+                    enrollment={enrollment}
+                    onDownload={handleDownload}
+                    onShare={handleShare}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>
     </SidebarProvider>
-  )
-}
-
-interface IssuedCertificate {
-  id: string;
-  courseTitle: string;
-  issueDate: string;
-  grade: string;
-  score: number;
-  tutor: string;
-  status: string;
-  templateId: string;
+  );
 }
 
 function IssuedCertificateCard({
-  certificate,
+  enrollment,
   onDownload,
   onShare,
 }: {
-  certificate: IssuedCertificate;
-  onDownload: (id: string) => void;
+  enrollment: Enrollment;
+  onDownload: (url: string) => void;
   onShare: (id: string) => void;
 }) {
+  if (!enrollment.certification) return null;
+
+  const pdfUrl = `${baseUrl}${enrollment.certification.downloadUrl}`;
+  const shareUrl = `/certificates/${enrollment.certification.certificateId}`;
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="bg-green-50">
-            Issued
-          </Badge>
-          <div className="text-sm text-muted-foreground">{new Date(certificate.issueDate).toLocaleDateString()}</div>
-        </div>
-        <CardTitle className="mt-2 text-lg">{certificate.courseTitle}</CardTitle>
-        <CardDescription>Tutor: {certificate.tutor}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-center py-4">
-          <div className="relative">
-            <Award className="h-20 w-20 text-primary/80" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold">{certificate.grade}</span>
+    <Link
+      href={shareUrl}
+      className="hover:shadow-lg transition-shadow rounded-md"
+    >
+      <Card className="h-full flex flex-col justify-between hover:border-primary">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline" className="bg-green-50 text-green-700">
+              Issued
+            </Badge>
+            <div className="text-sm text-muted-foreground">
+              {new Date(enrollment.certification.issuedAt).toLocaleDateString()}
             </div>
           </div>
-        </div>
-        <div className="mt-2 text-center">
-          <p className="text-sm font-medium">Score: {certificate.score}%</p>
-        </div>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" size="sm" onClick={() => onDownload(certificate.id)}>
-          <Download className="mr-2 h-4 w-4" />
-          Download
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => onShare(certificate.id)}>
-          <ExternalLink className="mr-2 h-4 w-4" />
-          Share
-        </Button>
-      </CardFooter>
-    </Card>
-  )
-}
+          <CardTitle className="mt-2 text-lg">
+            {enrollment.course.title}
+          </CardTitle>
+          <CardDescription>
+            Tutor: {enrollment.tutor?.name || "Unknown"}
+          </CardDescription>
+        </CardHeader>
 
-interface PendingCertificate {
-  id: string;
-  courseTitle: string;
-  tutor: string;
-  progress: number;
-}
-
-function PendingCertificateCard({ certificate }: { certificate: PendingCertificate }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="bg-amber-50">
-            In Progress
-          </Badge>
-        </div>
-        <CardTitle className="mt-2 text-lg">{certificate.courseTitle}</CardTitle>
-        <CardDescription>Tutor: {certificate.tutor}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-center py-4">
-          <div className="relative">
-            <Award className="h-20 w-20 text-muted-foreground/30" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold text-muted-foreground">{certificate.progress}%</span>
+        <CardContent className="flex-1">
+          <div className="relative w-full overflow-hidden rounded-md border bg-muted">
+            <div className="relative pb-[75%]">
+              <embed
+                src={pdfUrl}
+                type="application/pdf"
+                className="absolute top-0 left-0 h-full w-full"
+              />
             </div>
           </div>
-        </div>
-        <div className="mt-2">
-          <div className="h-2 w-full rounded-full bg-muted">
-            <div className="h-2 rounded-full bg-primary/80" style={{ width: `${certificate.progress}%` }}></div>
+          <div className="mt-2 text-center text-sm font-medium">
+            Completed:{" "}
+            {new Date(
+              enrollment.actualCompletionDate || ""
+            ).toLocaleDateString()}
           </div>
-          <p className="mt-2 text-center text-sm text-muted-foreground">{certificate.progress}% course completion</p>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button variant="outline" className="w-full" asChild>
-          <Link href={`/student/my-courses/${certificate.id}`}>Continue Course</Link>
-        </Button>
-      </CardFooter>
-    </Card>
-  )
+        </CardContent>
+
+        <CardFooter className="flex justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault();
+              onDownload(enrollment.certification!.downloadUrl);
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault();
+              onShare(enrollment.certification!.certificateId);
+            }}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Share
+          </Button>
+        </CardFooter>
+      </Card>
+    </Link>
+  );
 }
 
-function EmptyCertificates({ type, searchQuery }: { type: string; searchQuery: string }) {
+function EmptyCertificates({ searchQuery }: { searchQuery: string }) {
   return (
     <Card>
       <CardHeader>
@@ -262,9 +261,7 @@ function EmptyCertificates({ type, searchQuery }: { type: string; searchQuery: s
         <CardDescription>
           {searchQuery
             ? "No certificates match your search criteria."
-            : type === "issued"
-              ? "You haven't received any certificates yet."
-              : "You don't have any pending certificates."}
+            : "You haven't received any certificates yet."}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-center justify-center py-8">
@@ -272,9 +269,7 @@ function EmptyCertificates({ type, searchQuery }: { type: string; searchQuery: s
         <p className="mt-4 text-center text-muted-foreground">
           {searchQuery
             ? "Try adjusting your search or clear the search field."
-            : type === "issued"
-              ? "Complete courses to earn certificates that showcase your skills."
-              : "Enroll in courses and complete them to earn certificates."}
+            : "Complete courses to earn certificates that showcase your skills."}
         </p>
       </CardContent>
       <CardFooter>
@@ -286,5 +281,5 @@ function EmptyCertificates({ type, searchQuery }: { type: string; searchQuery: s
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }

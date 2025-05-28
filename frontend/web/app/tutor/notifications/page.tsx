@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { io, Socket } from "socket.io-client"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 
@@ -21,6 +21,9 @@ export default function NotificationsPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const router = useRouter()
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+    
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -30,7 +33,7 @@ export default function NotificationsPage() {
 
     const verifyAndLoadUser = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/auth/verify", {
+        const response = await fetch(`${baseUrl}/api/auth/verify`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -39,11 +42,11 @@ export default function NotificationsPage() {
         const data = await response.json()
         setCurrentUser(data.user)
 
-        const res = await fetch(`http://localhost:5000/api/notifications/${data.user._id}`)
+        const res = await fetch(`${baseUrl}/api/notifications/${data.user._id}`)
         const notifs = await res.json()
         setNotifications(notifs.notifications || [])
 
-        const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:5000", {
+        const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "${baseUrl}", {
           auth: {
             Authorization: `Bearer ${token}`,
           },
@@ -66,11 +69,7 @@ export default function NotificationsPage() {
         newSocket.on("connect_error", (error: Error) => {
           console.error("Socket connection error:", error)
           if (error.message.includes("Authentication error")) {
-            toast({
-              title: "Session expired",
-              description: "Please login again",
-              variant: "destructive",
-            })
+            toast.error("Session expired, Please login again")
             router.push("/auth/signin")
           }
         })
@@ -95,7 +94,7 @@ export default function NotificationsPage() {
   const markAllAsRead = async () => {
     if (!currentUser) return
     try {
-      await fetch("http://localhost:5000/api/notifications/markAsRead", {
+      await fetch(`${baseUrl}/api/notifications/markAsRead`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

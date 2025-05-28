@@ -1,5 +1,5 @@
 // src/application/services/SessionService.js
-import SessionRepository from '../../infrastructure/repositories/SessionRepository.js';
+import SessionRepository from "../../infrastructure/repositories/SessionRepository.js";
 
 class SessionService {
   async createSession(sessionData) {
@@ -14,8 +14,11 @@ class SessionService {
     return await SessionRepository.findById(id);
   }
 
-  async getSessionsByUserId(userId) {
-    return await SessionRepository.findByUserId(userId);
+  async getSessionsByTutorId(userId) {
+    return await SessionRepository.findByTutorId(userId);
+  }
+  async getSessionsByStudentId(userId) {
+    return await SessionRepository.findByStudentId(userId);
   }
 
   async updateSession(id, sessionData) {

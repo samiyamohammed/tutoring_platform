@@ -93,7 +93,7 @@ interface VerificationDocument {
   _id: string
   name: string
   url: string
-  type?: string // Make type optional
+  type?: string 
   size?: number
 }
 
@@ -237,52 +237,36 @@ export default function DocumentVerificationPage() {
       setIsLoadingDoc(true);
       setSelectedDoc(doc);
 
-      // Check if we already have a blob URL
-      if (doc.url.startsWith('blob:')) {
-        setIsLoadingDoc(false);
-        return;
-      }
-
-      // Construct the full URL
-      const fullUrl = doc.url.startsWith('http')
+      // Always use absolute URL from backend
+      const fullUrl = doc.url.startsWith("http")
         ? doc.url
-        : `http://localhost:5000${doc.url.startsWith('/') ? '' : '/'}${doc.url}`;
+        : `http://localhost:5000${doc.url}`;
 
-      // Check if document is PDF (with null check)
-      const isPdf = doc.type?.includes('pdf') || doc.url?.endsWith('.pdf');
-
-      if (isPdf) {
-        setSelectedDoc({
-          ...doc,
-          url: fullUrl,
-          type: doc.type || 'application/pdf' // Ensure type is set
-        });
-        return;
-      }
-
-      // For non-PDF files (images), fetch and create blob URL
-      const res = await fetch(fullUrl, {
+      // Determine content type from response header instead of extension
+      const headResponse = await fetch(fullUrl, {
+        method: "HEAD",
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
-      if (!res.ok) throw new Error(`Failed to fetch document: ${res.status}`);
-
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const contentType =
+        headResponse.headers.get("content-type") || "application/octet-stream";
 
       setSelectedDoc({
         ...doc,
-        url: blobUrl,
-        type: doc.type || res.headers.get('content-type') || 'application/octet-stream'
+        url: fullUrl,
+        type: contentType,
       });
     } catch (error) {
-      console.error('Preview error:', error);
+      console.error("Preview error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load document preview",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to load document preview",
       });
     } finally {
       setIsLoadingDoc(false);

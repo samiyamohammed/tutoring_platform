@@ -1,18 +1,31 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { BookOpen, X } from "lucide-react"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { BookOpen, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { useAuth } from "@/lib/auth-provider"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -21,24 +34,35 @@ const formSchema = z.object({
   password: z.string().min(1, {
     message: "Password is required.",
   }),
-})
+});
 
 type Toast = {
   id: string;
   title: string;
   description: string;
   variant?: "default" | "destructive";
-}
+};
+
+type Tutor = {
+  _id: string;
+  email: string;
+  verification_status: string;
+  name: string;
+  role: string;
+};
+
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 export default function SignInPage() {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = useState(false)
-  const [isClient, setIsClient] = useState(false)
-  const [toasts, setToasts] = useState<Toast[]>([])
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   useEffect(() => {
-    setIsClient(true)
-  }, [])
+    setIsClient(true);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,48 +70,141 @@ export default function SignInPage() {
       email: "",
       password: "",
     },
-  })
+  });
+
+  const addDebugInfo = (message: string) => {
+    setDebugInfo((prev) => [
+      ...prev,
+      `${new Date().toISOString()}: ${message}`,
+    ]);
+    console.log(message);
+  };
 
   const showToast = (toast: Omit<Toast, "id">) => {
     if (!isClient) return;
-    
-    const id = Math.random().toString(36).substring(2, 9)
-    setToasts((prev) => [...prev, { ...toast, id }])
-    
+
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [...prev, { ...toast, id }]);
+
     setTimeout(() => {
-      dismissToast(id)
-    }, 5000)
-  }
+      dismissToast(id);
+    }, 5000);
+  };
 
   const dismissToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const fetchTutorData = async (
+    token: string,
+    email: string
+  ): Promise<Tutor | null> => {
+    try {
+      // addDebugInfo(`Fetching tutor data for ${email}`);
+      const response = await fetch(`${baseUrl}/api/users/tutors`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        // addDebugInfo(
+        // `Failed to fetch tutors: ${response.status} ${response.statusText}`
+        // );
+        return null;
+      }
+
+      const tutors: Tutor[] = await response.json();
+      // addDebugInfo(`Found ${tutors.length} tutors in system`);
+
+      const currentTutor = tutors.find((t) => t.email === email);
+      if (!currentTutor) {
+        // addDebugInfo(`Tutor with email ${email} not found in tutors list`);
+        return null;
+      }
+
+      // addDebugInfo(`Found tutor: ${JSON.stringify(currentTutor, null, 2)}`);
+      return currentTutor;
+    } catch (error) {
+      addDebugInfo(
+        `Error fetching tutor data: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
+  };
+
+  const handleTutorRedirect = async (token: string, email: string) => {
+    // addDebugInfo("Starting tutor verification check...");
+
+    const tutor = await fetchTutorData(token, email);
+    if (!tutor) {
+      // addDebugInfo("Tutor data not available, redirecting to onboarding");
+      showToast({
+        title: "Verification Required",
+        description: "Please complete your tutor verification",
+        variant: "default",
+      });
+      return "/tutor/pendingandinitial";
+    }
+
+    // addDebugInfo(`Tutor verification status: ${tutor.verification_status}`);
+
+    switch (tutor.verification_status.toLowerCase()) {
+      case "approved":
+        // addDebugInfo("Tutor approved, redirecting to dashboard");
+        return "/tutor/dashboard";
+      case "pending":
+        // addDebugInfo("Tutor pending approval, redirecting to pending page");
+        return "/tutor/pending";
+      case "initial":
+        // addDebugInfo("Tutor needs to complete onboarding");
+        return "/tutor/pendingandinitial";
+      case "rejected":
+        // addDebugInfo("Tutor verification rejected");
+        return "/tutor/rejected";
+      default:
+        // addDebugInfo(
+        //   `Unknown verification status: ${tutor.verification_status}`
+        // );
+        return "/tutor/onboarding";
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setDebugInfo([]);
+    // addDebugInfo("Starting login process...");
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+      // Step 1: Authenticate user
+      // addDebugInfo("Authenticating user...");
+      const response = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify({
           email: values.email.trim(),
-          password: values.password
+          password: values.password,
         }),
       });
 
       const responseData = await response.json();
+      // addDebugInfo(`Login response: ${JSON.stringify(responseData, null, 2)}`);
 
       if (!response.ok) {
         let errorMessage = "Login failed. Please try again.";
-        
+        let debugMessage = `Login failed with status ${response.status}\n`;
+
         if (response.status === 400) {
-          errorMessage = responseData.message || "Invalid request. Please check your input.";
+          errorMessage =
+            responseData.message || "Invalid request. Please check your input.";
           if (responseData.errors) {
-            errorMessage = Object.values(responseData.errors).join('\n');
+            errorMessage = Object.values(responseData.errors).join("\n");
           }
         } else if (response.status === 401) {
           errorMessage = "The email or password you entered is incorrect.";
@@ -95,6 +212,7 @@ export default function SignInPage() {
           errorMessage = "User not found. Please check your email or sign up.";
         }
 
+        addDebugInfo(`Login error: ${errorMessage}`);
         showToast({
           variant: "destructive",
           title: `Login Failed (${response.status})`,
@@ -102,7 +220,6 @@ export default function SignInPage() {
         });
         return;
       }
-
       const { token, user } = responseData;
 
       localStorage.setItem("token", token);
@@ -113,18 +230,27 @@ export default function SignInPage() {
         description: `Welcome back, ${user.name || user.email}!`,
       });
 
-      const roleRedirects = {
-        admin: "/admin/dashboard",
-        tutor: "/tutor/dashboard",
-        student: "/student/dashboard",
-        default: "/"
-      };
+      // Step 3: Determine redirect path
+      let redirectPath = "/";
 
-      const redirectPath = roleRedirects[user.role as keyof typeof roleRedirects] || roleRedirects.default;
+      if (user.role === "admin") {
+        redirectPath = "/admin/dashboard";
+        // addDebugInfo("Admin user detected, redirecting to admin dashboard");
+      } else if (user.role === "student") {
+        redirectPath = "/student/dashboard";
+        // addDebugInfo("Student user detected, redirecting to student dashboard");
+      } else if (user.role === "tutor") {
+        redirectPath = await handleTutorRedirect(token, user.email);
+      } else {
+        // addDebugInfo(`Unknown role ${user.role}, redirecting to home`);
+      }
+
       window.location.href = redirectPath;
-
     } catch (error) {
-      console.error('Login error:', error);
+      const errorMessage = `Network Error: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      // addDebugInfo(errorMessage);
       showToast({
         variant: "destructive",
         title: "Network Error",
@@ -137,7 +263,7 @@ export default function SignInPage() {
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      {/* Toast Container - Only rendered on client */}
+      {/* Toast Container */}
       {isClient && (
         <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2">
           {toasts.map((toast) => (
@@ -164,16 +290,55 @@ export default function SignInPage() {
         </div>
       )}
 
-      <Link href="/" className="absolute left-4 top-4 flex items-center gap-2 md:left-8 md:top-8">
+      {/* Debug Panel */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="fixed bottom-4 left-4 z-[100] max-w-md rounded-md bg-gray-900 p-4 text-xs text-white opacity-90">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-bold"></h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  navigator.clipboard.writeText(debugInfo.join("\n"))
+                }
+                className="text-xs hover:text-blue-300"
+              ></button>
+              <button
+                onClick={() => setDebugInfo([])}
+                className="text-xs hover:text-red-300"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="max-h-40 overflow-y-auto font-mono">
+            {debugInfo.length > 0 ? (
+              debugInfo.map((line, i) => (
+                <div key={i} className="mb-1 border-b border-gray-700 pb-1">
+                  {line}
+                </div>
+              ))
+            ) : (
+              <p></p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <Link
+        href="/"
+        className="absolute left-4 top-4 flex items-center gap-2 md:left-8 md:top-8"
+      >
         <BookOpen className="h-6 w-6" />
-        <span className="font-bold">EduConnect</span>
+        <span className="font-bold">Tutoring Platform</span>
       </Link>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Sign in</CardTitle>
-          <CardDescription>Enter your email and password to sign in to your account</CardDescription>
+          <CardDescription>
+            Enter your email and password to sign in to your account
+          </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -211,18 +376,24 @@ export default function SignInPage() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <div className="text-center text-sm">
-            <Link href="/auth/forgot-password" className="underline underline-offset-4 hover:text-primary">
+            <Link
+              href="/auth/forgot-password"
+              className="underline underline-offset-4 hover:text-primary"
+            >
               Forgot password?
             </Link>
           </div>
           <div className="text-center text-sm">
             Don&apos;t have an account?{" "}
-            <Link href="/auth/signup" className="underline underline-offset-4 hover:text-primary">
+            <Link
+              href="/auth/signup"
+              className="underline underline-offset-4 hover:text-primary"
+            >
               Sign up
             </Link>
           </div>
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

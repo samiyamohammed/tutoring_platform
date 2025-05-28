@@ -25,7 +25,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -77,7 +77,6 @@ export default function VideoSessionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("id")
-  const { toast } = useToast()
   const [socket, setSocket] = useState<Socket | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isJoined, setIsJoined] = useState(false)
@@ -106,7 +105,8 @@ export default function VideoSessionPage() {
     resolver: zodResolver(chatSchema),
     defaultValues: { message: "" }
   })
-
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
   // Initialize socket connection and verify user
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -117,7 +117,7 @@ export default function VideoSessionPage() {
 
     const loadUser = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/auth/verify', {
+        const response = await fetch(`${baseUrl}/api/auth/verify`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -139,7 +139,7 @@ export default function VideoSessionPage() {
 
     loadUser()
 
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || "http://localhost:5000", {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_SERVER_URL || `${baseUrl}`, {
       auth: {
         Authorization: `Bearer ${token}`,
       },
@@ -151,11 +151,8 @@ export default function VideoSessionPage() {
 
     newSocket.on("connect_error", (err) => {
       console.error("Socket connection error:", err)
-      toast({
-        variant: "destructive",
-        title: "Connection error",
-        description: "Could not connect to the session server.",
-      })
+      toast.error( "Could not connect to the session server.",
+      )
     })
 
     setSocket(newSocket)
@@ -277,7 +274,7 @@ export default function VideoSessionPage() {
     }
 
     const handleSessionEnded = () => {
-      toast({ title: "Session ended", description: "The tutor has ended the session." })
+      toast.message( "The tutor has ended the session.")
       handleLeaveSession()
     }
 
@@ -413,20 +410,14 @@ export default function VideoSessionPage() {
 
   const handleJoinSession = () => {
     if (!hasCameraPermission && !hasMicrophonePermission) {
-      toast({
-        variant: "destructive",
-        title: "Permission required",
-        description: "Camera or microphone access is required to join the session.",
-      })
+      toast.message( "Camera or microphone access is required to join the session.",
+      )
       return
     }
 
     if (!socket || !currentUser) {
-      toast({
-        variant: "destructive",
-        title: "Connection error",
-        description: "Not connected to session server.",
-      })
+      toast.error( "Not connected to session server.",
+      )
       return
     }
 
@@ -533,11 +524,8 @@ export default function VideoSessionPage() {
       }
     } catch (err) {
       console.error("Screen sharing error:", err)
-      toast({
-        variant: "destructive",
-        title: "Screen sharing error",
-        description: "Could not share your screen. Please try again.",
-      })
+      toast.error( "Could not share your screen. Please try again.",
+      )
     }
   }
 
@@ -551,10 +539,8 @@ export default function VideoSessionPage() {
   const copySessionLink = () => {
     const link = `${window.location.origin}/join-session?id=${sessionId}`
     navigator.clipboard.writeText(link)
-    toast({
-      title: "Link copied",
-      description: "Session link copied to clipboard.",
-    })
+    toast.success( "Session link copied to clipboard.",
+    )
   }
 
   const onSubmitChat = (values: z.infer<typeof chatSchema>) => {

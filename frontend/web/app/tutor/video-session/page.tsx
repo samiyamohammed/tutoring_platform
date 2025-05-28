@@ -24,7 +24,7 @@ import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/comp
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -77,7 +77,6 @@ export default function VideoSessionPage() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("id") || "demo-session"
   const sessionType = searchParams.get("type") || "group"
-  const { toast } = useToast()
 
   const [isJoined, setIsJoined] = useState(false)
   const [isMicOn, setIsMicOn] = useState(true)
@@ -242,20 +241,14 @@ export default function VideoSessionPage() {
 
   const handleJoinSession = () => {
     if (!hasCameraPermission && !hasMicrophonePermission) {
-      toast({
-        variant: "destructive",
-        title: "Permission required",
-        description: "Camera or microphone access is required to join the session.",
-      })
+      toast.error("Camera or microphone access is required to join the session.",
+      )
       return
     }
 
     setIsJoined(true)
     setShowJoinDialog(false)
-    toast({
-      title: "Joined session",
-      description: `You have joined the ${sessionType} session.`,
-    })
+    toast.success(`You have joined the ${sessionType} session.`)
   }
 
   const handleLeaveSession = () => {
@@ -337,11 +330,7 @@ export default function VideoSessionPage() {
         setIsScreenSharing(true)
       } catch (err) {
         console.error("Error sharing screen:", err)
-        toast({
-          variant: "destructive",
-          title: "Screen sharing error",
-          description: "Could not share your screen. Please try again.",
-        })
+        toast.error("Could not share your screen. Please try again.")
       }
     } else {
       // Stop screen sharing and restore camera
@@ -392,10 +381,7 @@ export default function VideoSessionPage() {
   const copySessionLink = () => {
     const link = `${window.location.origin}/join-session?id=${sessionId}`
     navigator.clipboard.writeText(link)
-    toast({
-      title: "Link copied",
-      description: "Session link copied to clipboard.",
-    })
+    toast.success("Session link copied to clipboard.")
   }
 
   const onSubmitChat = (values: z.infer<typeof chatSchema>) => {

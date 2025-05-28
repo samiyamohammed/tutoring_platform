@@ -13,7 +13,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { TutorSidebar } from "@/components/tutor-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
@@ -51,7 +51,6 @@ interface UploadedFile {
 
 export default function DocumentVerificationPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [uploadError, setUploadError] = useState("")
@@ -119,19 +118,13 @@ export default function DocumentVerificationPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      toast({
-        title: "Documents submitted successfully",
-        description: "Your verification documents have been submitted for review.",
-      })
+      toast.success("Your verification documents have been submitted for review.",
+      )
 
       // Redirect to pending page
       router.push("/tutor/verification/pending")
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to submit documents. Please try again.",
-      })
+      toast.error("Failed to submit documents. Please try again.")
     } finally {
       setIsSubmitting(false)
     }

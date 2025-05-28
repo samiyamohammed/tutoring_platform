@@ -3,13 +3,14 @@ import { Inter } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/lib/auth-provider"
+import { toast } from "sonner";
 
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "EduConnect - Learning Platform",
+  title: "Tutoring Platform",
   description: "Connect with tutors and learn at your own pace",
     generator: 'v0.dev'
 }

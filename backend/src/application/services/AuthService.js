@@ -6,6 +6,7 @@ import Tutor from "../../domain/models/Tutor.js";
 import Admin from "../../domain/models/Admin.js";
 import sgMail from '../../infrastructure/config/sendgrid.js';
 import { generateOTP } from '../../utils/otp.js';
+import User from "../../domain/models/User.js";
 
 const ROLE_MODELS = {
   student: Student,
@@ -157,6 +158,98 @@ class AuthService {
       } 
     };
   };
+
+  async sendPasswordResetOTP(email) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // const otp = generateOTP();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+    user.resetPasswordOTP = otp;
+    user.resetPasswordOTPExpiry = otpExpiry;
+    await user.save();
+
+    // Using SendGrid format
+    const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
+    console.log("Sending password reset email to:", email);
+    console.log("OTP:", otp);
+    console.log("From email:", FROM_EMAIL);
+
+    const msg = {
+      to: email,
+      from: {
+        email: FROM_EMAIL,
+        name: "Tutoring Platform", // Optional: Adds a sender name
+      },
+      subject: "Password Reset OTP",
+      text: `Your password reset OTP is: ${otp}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Password Reset Request</h2>
+          <p>Your password reset OTP is:</p>
+          <div style="background: #f4f4f4; padding: 10px; border-radius: 5px; 
+                     font-size: 24px; font-weight: bold; text-align: center; margin: 20px 0;">
+            ${otp}
+          </div>
+          <p>This OTP will expire in 10 minutes.</p>
+          <p>If you didn't request this, please ignore this email.</p>
+        </div>
+      `,
+    };
+
+    try {
+      await sgMail.send(msg);
+      return { message: "OTP sent successfully" };
+    } catch (error) {
+      console.error("Error sending password reset email:", error);
+      if (error.response) {
+        console.error(error.response.body);
+      }
+      throw new Error("Failed to send password reset email");
+    }
+  }
+
+  async verifyResetOTP(email, otp) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (
+      user.resetPasswordOTP !== otp || 
+      user.resetPasswordOTPExpiry < new Date()
+    ) {
+      throw new Error("Invalid or expired OTP");
+    }
+
+    user.isResetOTPVerified = true;
+    await user.save();
+
+    return { message: "OTP verified successfully" };
+  }
+
+  async resetPassword(email, otp, newPassword) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.resetPasswordOTP !== otp || !user.isResetOTPVerified) {
+      throw new Error("Invalid OTP or verification");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordOTPExpiry = undefined;
+    user.isResetOTPVerified = undefined;
+    await user.save();
+
+    return { message: "Password reset successfully" };
+  }
 }
 
 // Export a new instance

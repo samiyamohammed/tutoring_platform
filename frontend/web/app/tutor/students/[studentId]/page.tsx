@@ -151,6 +151,9 @@ export default function StudentDetailsPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("progress")
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+    
   useEffect(() => {
     const fetchEnrollment = async () => {
       try {
@@ -169,7 +172,7 @@ export default function StudentDetailsPage() {
 
         // Fetch enrollment with all populated data
         const enrollmentRes = await fetch(
-          `http://localhost:5000/api/enrollment/${studentId}`,
+          `${baseUrl}/api/enrollment/${studentId}`,
           { headers }
         )
         if (!enrollmentRes.ok) throw new Error('Failed to fetch enrollment data')

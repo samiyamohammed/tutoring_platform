@@ -71,47 +71,76 @@ const sessionFormSchema = z
     scheduledDate: z.date({ required_error: "Session date is required" }),
     notes: z.string().optional(),
     selectedStudent: z.string().optional(),
-    startTime: z.string().min(1, { message: "Start time is required" }),
-    endTime: z.string().min(1, { message: "End time is required" }),
+    startTime: z
+      .string()
+      .min(1, { message: "Start time is required" })
+      .refine((time) => /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time), {
+        message: "Invalid time format (HH:MM)",
+      }),
+    endTime: z
+      .string()
+      .min(1, { message: "End time is required" })
+      .refine((time) => /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time), {
+        message: "Invalid time format (HH:MM)",
+      }),
   })
   .refine(validateTimeOrder, {
     message: "End time must be after start time",
     path: ["endTime"],
   });
 
+// Update the conflict display in the UI
+// (Removed stray JSX referencing timeConflict outside of a component)
+
 type SessionFormValues = z.infer<typeof sessionFormSchema>;
 
-type Enrollment = {
+type Course = {
   _id: string;
-  student: {
-    _id: string;
-    name: string;
-    email: string;
-  };
+  title: string;
+};
+
+type Student = {
+  _id: string;
+  name: string;
+  email: string;
+};
+
+type SessionConflict = {
+  exists: boolean;
+  conflictingSession?: ExistingSession;
+};
+
+type ExistingSession = {
+  _id: string;
   course: {
     _id: string;
     title: string;
-    tutor: string;
   };
-  enrolledSessionType: string;
-  currentStatus: string;
+  sessionType: string;
+  sessionCategory: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string;
+  status: string;
 };
 
 export default function SessionSchedulerPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [tutorCourses, setTutorCourses] = useState<Course[]>([]);
+  const [courseStudents, setCourseStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"; 
+  const [timeConflict, setTimeConflict] = useState<SessionConflict | null>(
+    null
+  );
+  const [existingSessions, setExistingSessions] = useState<ExistingSession[]>(
+    []
+  );
 
-  const [timeConflict, setTimeConflict] = useState<{
-    exists: boolean;
-    courseTitle?: string;
-    sessionType?: string;
-  } | null>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
   const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionFormSchema),
@@ -129,17 +158,9 @@ export default function SessionSchedulerPage() {
 
   const watchSessionCategory = form.watch("sessionCategory");
   const watchCourse = form.watch("course");
-  const [existingSessions, setExistingSessions] = useState<
-    Array<{
-      startTime: string;
-      endTime: string;
-      course: { title: string };
-      sessionType: string;
-    }>
-  >([]);
 
   useEffect(() => {
-    const fetchEnrollments = async () => {
+    const fetchTutorCourses = async () => {
       try {
         const user = JSON.parse(localStorage.getItem("user") || "{}");
         if (!user.id) {
@@ -147,8 +168,61 @@ export default function SessionSchedulerPage() {
         }
 
         const token = localStorage.getItem("token") || "";
+        const courses = await fetch(`${apiUrl}/api/course/tutor`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!courses.ok) {
+          throw new Error("Failed to fetch tutor courses");
+        }
+
+        const course = await courses.json();
+        setTutorCourses(course);
+
+        const response = await fetch(`${apiUrl}/api/session/tutor`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch existing sessions");
+        }
+
+        const data = await response.json();
+        setExistingSessions(data);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch tutor courses"
+        );
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load tutor courses",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTutorCourses();
+  }, [toast]);
+
+  useEffect(() => {
+    const fetchCourseStudents = async () => {
+      const selectedCourseId = form.getValues("course");
+      if (!selectedCourseId) {
+        setCourseStudents([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token") || "";
         const response = await fetch(
-          `${apiUrl}/api/enrollment/tutor`,
+          `${apiUrl}/api/enrollment/course/${selectedCourseId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -157,27 +231,40 @@ export default function SessionSchedulerPage() {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch enrollments");
+          throw new Error("Failed to fetch course enrollments");
         }
 
-        const data = await response.json();
-        setEnrollments(data);
+        const enrollments = await response.json();
+
+        const activeStudents = enrollments
+          .filter((enrollment: any) =>
+            ["enrolled", "in_progress"].includes(enrollment.currentStatus)
+          )
+          .map((enrollment: any) => ({
+            _id: enrollment.student._id,
+            name: enrollment.student.name,
+            email: enrollment.student.email,
+          }));
+
+        setCourseStudents(activeStudents);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to fetch enrollments"
+          err instanceof Error
+            ? err.message
+            : "Failed to fetch course enrollments"
         );
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to load course data",
+          description: "Failed to load course students",
         });
       } finally {
         setLoading(false);
       }
     };
 
-    fetchEnrollments();
-  }, [toast]);
+    fetchCourseStudents();
+  }, [form.watch("course"), toast]);
 
   useEffect(() => {
     const fetchExistingSessions = async () => {
@@ -187,15 +274,12 @@ export default function SessionSchedulerPage() {
           throw new Error("User not authenticated");
         }
 
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          `${apiUrl}/api/session/tutor`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const token = localStorage.getItem("token");
+        const response = await fetch(`${apiUrl}/api/session/tutor`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch existing sessions");
@@ -220,71 +304,77 @@ export default function SessionSchedulerPage() {
     form.trigger(["startTime", "endTime"]);
   }, [form.watch("startTime"), form.watch("endTime")]);
 
-  // Group enrollments by course
-  const courses = enrollments.reduce((acc, enrollment) => {
-    const courseId = enrollment.course._id;
-    if (!acc[courseId]) {
-      acc[courseId] = {
-        ...enrollment.course,
-        students: [],
-      };
-    }
-    // Only add active students (filter out dropped/suspended)
-    if (['enrolled', 'in_progress'].includes(enrollment.currentStatus)) {
-      acc[courseId].students.push(enrollment.student);
-    }
-    return acc;
-  }, {} as Record<string, { 
-    _id: string; 
-    title: string; 
-    students: Array<{ _id: string; name: string; email: string }> 
-  }>);
+  const checkTimeConflict = (
+    newSession: {
+      scheduledDate: Date;
+      startTime: string;
+      endTime: string;
+      sessionType: string;
+    },
+    existingSession: ExistingSession
+  ): boolean => {
+    // If sessions are on different days, no conflict
+    const newDate = new Date(newSession.scheduledDate).toDateString();
+    const existingDate = new Date(existingSession.scheduledDate).toDateString();
+    if (newDate !== existingDate) return false;
 
-  const courseOptions = Object.values(courses).map((course) => ({
-    id: course._id,
-    title: course.title,
-  }));
+    // If session types are different, no conflict
+    if (newSession.sessionType !== existingSession.sessionType) return false;
 
-  // Get students for the currently selected course
-  const currentCourseStudents = watchCourse
-    ? courses[watchCourse]?.students || []
-    : [];
+    // Parse times
+    const [newStartHours, newStartMins] = newSession.startTime
+      .split(":")
+      .map(Number);
+    const [newEndHours, newEndMins] = newSession.endTime.split(":").map(Number);
+    const [existingStartHours, existingStartMins] = existingSession.startTime
+      .split(":")
+      .map(Number);
+    const [existingEndHours, existingEndMins] = existingSession.endTime
+      .split(":")
+      .map(Number);
 
-  const checkSessionConflict = async (
+    // Convert to minutes since midnight for easier comparison
+    const newStart = newStartHours * 60 + newStartMins;
+    const newEnd = newEndHours * 60 + newEndMins;
+    const existingStart = existingStartHours * 60 + existingStartMins;
+    const existingEnd = existingEndHours * 60 + existingEndMins;
+
+    // Check for overlap
+    return (
+      (newStart >= existingStart && newStart < existingEnd) || // New session starts during existing
+      (newEnd > existingStart && newEnd <= existingEnd) || // New session ends during existing
+      (newStart <= existingStart && newEnd >= existingEnd) // New session completely overlaps existing
+    );
+  };
+
+  const checkSessionConflict = (
     date: Date,
     startTime: string,
-    endTime: string
+    endTime: string,
+    sessionType: string
   ) => {
     setCheckingAvailability(true);
     setTimeConflict(null);
 
     try {
-      // Parse times (UTC)
-      const startDateTime = new Date(date);
-      const [startHours, startMinutes] = startTime.split(":").map(Number);
-      startDateTime.setUTCHours(startHours, startMinutes, 0, 0);
+      const newSession = {
+        scheduledDate: date,
+        startTime,
+        endTime,
+        sessionType,
+      };
 
-      const endDateTime = new Date(date);
-      const [endHours, endMinutes] = endTime.split(":").map(Number);
-      endDateTime.setUTCHours(endHours, endMinutes, 0, 0);
-
-      // Check against existing sessions
-      const conflict = existingSessions.find((session) => {
-        const existingStart = new Date(session.startTime);
-        const existingEnd = new Date(session.endTime);
-
-        return (
-          (startDateTime >= existingStart && startDateTime < existingEnd) ||
-          (endDateTime > existingStart && endDateTime <= existingEnd) ||
-          (startDateTime <= existingStart && endDateTime >= existingEnd)
-        );
-      });
+      // Find any conflicting sessions
+      const conflict = existingSessions.find(
+        (session) =>
+          session.status !== "declined" && // Ignore declined sessions
+          checkTimeConflict(newSession, session)
+      );
 
       if (conflict) {
         setTimeConflict({
           exists: true,
-          courseTitle: conflict.course.title,
-          sessionType: conflict.sessionType,
+          conflictingSession: conflict,
         });
       }
     } catch (error) {
@@ -312,7 +402,7 @@ export default function SessionSchedulerPage() {
       toast({
         variant: "destructive",
         title: "Time Conflict",
-        description: `This time is already booked for ${timeConflict.courseTitle} (${timeConflict.sessionType})`,
+        description: `This time is already booked for ${timeConflict.conflictingSession?.course.title} (${timeConflict.conflictingSession?.sessionType})`,
       });
       return;
     }
@@ -329,10 +419,10 @@ export default function SessionSchedulerPage() {
         startTime: values.startTime,
         endTime: values.endTime,
         notes: values.notes,
-        status: "pending",
+        status: "approved",
       };
 
-      const response = await apiClient.post("/session", sessionData);
+      const response = await apiClient.post("/api/session", sessionData);
 
       if (response.error) {
         if (response.error.includes("conflict")) {
@@ -347,7 +437,7 @@ export default function SessionSchedulerPage() {
       }
 
       toast({ title: "Session scheduled!" });
-      router.push("/tutor/sessions");
+      router.push("/tutor/session");
     } catch (error) {
       toast({
         variant: "destructive",
@@ -361,14 +451,16 @@ export default function SessionSchedulerPage() {
   }
 
   useEffect(() => {
-    const { scheduledDate, startTime, endTime } = form.getValues();
-    if (scheduledDate && startTime && endTime) {
-      checkSessionConflict(scheduledDate, startTime, endTime);
+    const { scheduledDate, startTime, endTime, sessionType } = form.getValues();
+    if (scheduledDate && startTime && endTime && sessionType) {
+      checkSessionConflict(scheduledDate, startTime, endTime, sessionType);
     }
   }, [
     form.watch("scheduledDate"),
     form.watch("startTime"),
     form.watch("endTime"),
+    form.watch("sessionType"),
+    existingSessions, // Add this dependency
   ]);
 
   return (
@@ -429,9 +521,12 @@ export default function SessionSchedulerPage() {
                                 <div className="p-2 text-center text-sm text-destructive">
                                   {error}
                                 </div>
-                              ) : courseOptions.length > 0 ? (
-                                courseOptions.map((course) => (
-                                  <SelectItem key={course.id} value={course.id}>
+                              ) : tutorCourses.length > 0 ? (
+                                tutorCourses.map((course) => (
+                                  <SelectItem
+                                    key={course._id}
+                                    value={course._id}
+                                  >
                                     {course.title}
                                   </SelectItem>
                                 ))
@@ -540,8 +635,8 @@ export default function SessionSchedulerPage() {
                                           ? "Select a course first"
                                           : loading
                                           ? "Loading students..."
-                                          : currentCourseStudents.length === 0
-                                          ? "No students enrolled"
+                                          : courseStudents.length === 0
+                                          ? "No active students"
                                           : "Select a student"
                                       }
                                     />
@@ -556,8 +651,8 @@ export default function SessionSchedulerPage() {
                                     <div className="p-2 text-center text-sm text-destructive">
                                       {error}
                                     </div>
-                                  ) : currentCourseStudents.length > 0 ? (
-                                    currentCourseStudents.map((student) => (
+                                  ) : courseStudents.length > 0 ? (
+                                    courseStudents.map((student) => (
                                       <SelectItem
                                         key={student._id}
                                         value={student._id}
@@ -567,7 +662,7 @@ export default function SessionSchedulerPage() {
                                     ))
                                   ) : (
                                     <div className="p-2 text-center text-sm">
-                                      No students found for this course
+                                      No active students found for this course
                                     </div>
                                   )}
                                 </SelectContent>
@@ -581,7 +676,6 @@ export default function SessionSchedulerPage() {
                   </CardContent>
                 </Card>
 
-                {/* Rest of the form remains the same */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Scheduling</CardTitle>
@@ -705,8 +799,8 @@ export default function SessionSchedulerPage() {
                             {timeConflict?.exists && (
                               <FormDescription className="text-destructive">
                                 ⚠️ Conflict: Already booked for{" "}
-                                {timeConflict.courseTitle} (
-                                {timeConflict.sessionType})
+                                {timeConflict.conflictingSession?.course.title}{" "}
+                                ({timeConflict.conflictingSession?.sessionType})
                               </FormDescription>
                             )}
                             {!checkingAvailability &&
@@ -819,7 +913,7 @@ export default function SessionSchedulerPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.back()}
+                    onClick={() => router.push("/tutor/session")}
                   >
                     Cancel
                   </Button>

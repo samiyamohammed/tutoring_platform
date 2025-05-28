@@ -1,136 +1,176 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { BookOpen, CheckCircle, Clock, FileText, Filter, Search, Award, Bookmark, BarChart2 } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { StudentSidebar } from "@/components/student-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Skeleton } from "@/components/ui/skeleton"
-
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import {
+  BookOpen,
+  CheckCircle,
+  Clock,
+  FileText,
+  Filter,
+  Search,
+  Award,
+  Bookmark,
+  BarChart2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { StudentSidebar } from "@/components/student-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Enrollment {
-  _id: string
+  _id: string;
   course: {
-    _id: string
-    title: string
-    description: string
-    image?: string
+    _id: string;
+    title: string;
+    description: string;
+    image?: string;
     tutor: {
-      _id: string
-      name: string
-      avatar?: string
-    }
-    moduleCount?: number
-    sectionCount?: number
-  }
-  currentStatus: 'enrolled' | 'in_progress' | 'completed' | 'dropped' | 'suspended'
-  enrolledSessionType: 'online' | 'group' | 'oneOnOne'
+      _id: string;
+      name: string;
+      avatar?: string;
+    };
+    moduleCount?: number;
+    sectionCount?: number;
+  };
+  currentStatus:
+    | "enrolled"
+    | "in_progress"
+    | "completed"
+    | "dropped"
+    | "suspended";
+  enrolledSessionType: "online" | "group" | "oneOnOne";
   progress: {
     modules: Array<{
-      moduleId: string
-      status: 'not_started' | 'started' | 'completed'
+      moduleId: string;
+      status: "not_started" | "started" | "completed";
       sections: Array<{
-        sectionId: string
-        status: 'not_started' | 'in_progress' | 'completed'
-        timeSpent: number
+        sectionId: string;
+        status: "not_started" | "in_progress" | "completed";
+        timeSpent: number;
         resourcesCompleted: Array<{
-          resourceId: string
-          resourceType: 'text' | 'video' | 'pdf' | 'quiz'
-          completedAt: string
-          completionData?: any
-        }>
-      }>
-    }>
-    completionPercentage: number
-    timeSpentTotal: number
+          resourceId: string;
+          resourceType: "text" | "video" | "pdf" | "quiz";
+          completedAt: string;
+          completionData?: any;
+        }>;
+      }>;
+    }>;
+    completionPercentage: number;
+    timeSpentTotal: number;
     currentModule?: {
-      _id: string
-      title: string
-    }
+      _id: string;
+      title: string;
+    };
     currentSection?: {
-      _id: string
-      title: string
-    }
-  }
+      _id: string;
+      title: string;
+    };
+  };
   certification: {
-    eligible: boolean
-    issued: boolean
-    certificateId?: string
-  }
+    eligible: boolean;
+    issued: boolean;
+    certificateId?: string;
+  };
   payment: {
-    status: 'pending' | 'partial' | 'paid' | 'refunded' | 'failed'
-  }
-  enrollmentDate: string
+    status: "pending" | "partial" | "paid" | "refunded" | "failed";
+  };
+  enrollmentDate: string;
 }
 
 export default function MyCoursesPage() {
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [sessionTypeFilter, setSessionTypeFilter] = useState("all")
-  const { toast } = useToast()
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sessionTypeFilter, setSessionTypeFilter] = useState("all");
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
   useEffect(() => {
     const fetchEnrollments = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
-        const response = await fetch('http://localhost:5000/api/enrollment/mycourses', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        })
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("token") || ""
+            : "";
+        const response = await fetch(`${baseUrl}/api/enrollment/mycourses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-        if (!response.ok) throw new Error('Failed to fetch enrollments')
+        if (!response.ok) throw new Error("Failed to fetch enrollments");
 
-        const data = await response.json()
-        setEnrollments(data)
+        const data = await response.json();
+        setEnrollments(data);
       } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch enrollments",
-        })
+        toast.error("Failed to fetch enrollments");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchEnrollments()
-  }, [toast])
+    fetchEnrollments();
+  }, [toast]);
 
   const filteredEnrollments = enrollments.filter((enrollment) => {
-    const matchesSearch = enrollment.course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         enrollment.course.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch =
+      enrollment.course?.title
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      enrollment.course?.description
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || enrollment.currentStatus === statusFilter
-    const matchesSessionType = sessionTypeFilter === "all" || enrollment.enrolledSessionType === sessionTypeFilter
+    const matchesStatus =
+      statusFilter === "all" || enrollment.currentStatus === statusFilter;
+    const matchesSessionType =
+      sessionTypeFilter === "all" ||
+      enrollment.enrolledSessionType === sessionTypeFilter;
 
-    return matchesSearch && matchesStatus && matchesSessionType
-  })
+    return matchesSearch && matchesStatus && matchesSessionType;
+  });
 
   const statusCounts = {
     all: enrollments.length,
-    enrolled: enrollments.filter(e => e.currentStatus === 'enrolled').length,
-    in_progress: enrollments.filter(e => e.currentStatus === 'in_progress').length,
-    completed: enrollments.filter(e => e.currentStatus === 'completed').length,
-  }
+    enrolled: enrollments.filter((e) => e.currentStatus === "enrolled").length,
+    in_progress: enrollments.filter((e) => e.currentStatus === "in_progress")
+      .length,
+    completed: enrollments.filter((e) => e.currentStatus === "completed")
+      .length,
+  };
 
   const getCompletedModules = (enrollment: Enrollment) => {
-    return enrollment.progress.modules.filter(m => m.status === 'completed').length
-  }
+    return enrollment.progress.modules.filter((m) => m.status === "completed")
+      .length;
+  };
 
   const getCompletedSections = (enrollment: Enrollment) => {
     return enrollment.progress.modules.reduce(
-      (acc, module) => acc + module.sections.filter(s => s.status === 'completed').length, 0
-    )
-  }
+      (acc, module) =>
+        acc + module.sections.filter((s) => s.status === "completed").length,
+      0
+    );
+  };
 
   if (loading) {
     return (
@@ -141,7 +181,9 @@ export default function MyCoursesPage() {
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div>
                 <h1 className="text-lg font-semibold">My Courses</h1>
-                <p className="text-sm text-muted-foreground">View all your enrolled courses</p>
+                <p className="text-sm text-muted-foreground">
+                  View all your enrolled courses
+                </p>
               </div>
             </div>
             <div className="flex-1 p-6">
@@ -166,7 +208,7 @@ export default function MyCoursesPage() {
           </main>
         </div>
       </SidebarProvider>
-    )
+    );
   }
 
   return (
@@ -177,7 +219,9 @@ export default function MyCoursesPage() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">My Courses</h1>
-              <p className="text-sm text-muted-foreground">View all your enrolled courses</p>
+              <p className="text-sm text-muted-foreground">
+                View all your enrolled courses
+              </p>
             </div>
           </div>
           <div className="flex-1 p-8 pt-6">
@@ -198,12 +242,21 @@ export default function MyCoursesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="enrolled">Enrolled ({statusCounts.enrolled})</SelectItem>
-                    <SelectItem value="in_progress">In Progress ({statusCounts.in_progress})</SelectItem>
-                    <SelectItem value="completed">Completed ({statusCounts.completed})</SelectItem>
+                    <SelectItem value="enrolled">
+                      Enrolled ({statusCounts.enrolled})
+                    </SelectItem>
+                    <SelectItem value="in_progress">
+                      In Progress ({statusCounts.in_progress})
+                    </SelectItem>
+                    <SelectItem value="completed">
+                      Completed ({statusCounts.completed})
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={sessionTypeFilter} onValueChange={setSessionTypeFilter}>
+                <Select
+                  value={sessionTypeFilter}
+                  onValueChange={setSessionTypeFilter}
+                >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Session Type" />
                   </SelectTrigger>
@@ -220,12 +273,14 @@ export default function MyCoursesPage() {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold">
-                  {filteredEnrollments.length} {filteredEnrollments.length === 1 ? "Course" : "Courses"} Found
+                  {filteredEnrollments.length}{" "}
+                  {filteredEnrollments.length === 1 ? "Course" : "Courses"}{" "}
+                  Found
                 </h2>
                 <div className="flex items-center gap-2">
                   {statusFilter !== "all" && (
                     <Badge variant="secondary" className="gap-1 capitalize">
-                      {statusFilter.replace('_', ' ')}
+                      {statusFilter.replace("_", " ")}
                       <button
                         onClick={() => setStatusFilter("all")}
                         className="ml-1 rounded-full hover:bg-secondary/80"
@@ -236,7 +291,7 @@ export default function MyCoursesPage() {
                   )}
                   {sessionTypeFilter !== "all" && (
                     <Badge variant="secondary" className="gap-1 capitalize">
-                      {sessionTypeFilter.replace('_', ' ')}
+                      {sessionTypeFilter.replace("_", " ")}
                       <button
                         onClick={() => setSessionTypeFilter("all")}
                         className="ml-1 rounded-full hover:bg-secondary/80"
@@ -253,15 +308,16 @@ export default function MyCoursesPage() {
                   <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">No courses found</h3>
                   <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                    We couldn't find any courses matching your search criteria. Try adjusting your filters.
+                    We couldn't find any courses matching your search criteria.
+                    Try adjusting your filters.
                   </p>
                   <Button
                     variant="outline"
                     className="mt-4"
                     onClick={() => {
-                      setStatusFilter("all")
-                      setSessionTypeFilter("all")
-                      setSearchQuery("")
+                      setStatusFilter("all");
+                      setSessionTypeFilter("all");
+                      setSearchQuery("");
                     }}
                   >
                     Reset Filters
@@ -270,8 +326,8 @@ export default function MyCoursesPage() {
               ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {filteredEnrollments.map((enrollment) => (
-                    <EnrollmentCard 
-                      key={enrollment._id} 
+                    <EnrollmentCard
+                      key={enrollment._id}
                       enrollment={enrollment}
                       completedModules={getCompletedModules(enrollment)}
                       completedSections={getCompletedSections(enrollment)}
@@ -284,17 +340,17 @@ export default function MyCoursesPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }
 
-function EnrollmentCard({ 
+function EnrollmentCard({
   enrollment,
   completedModules,
-  completedSections
-}: { 
-  enrollment: Enrollment
-  completedModules: number
-  completedSections: number
+  completedSections,
+}: {
+  enrollment: Enrollment;
+  completedModules: number;
+  completedSections: number;
 }) {
   const statusColors = {
     enrolled: "bg-blue-100 text-blue-800",
@@ -302,27 +358,27 @@ function EnrollmentCard({
     completed: "bg-green-100 text-green-800",
     dropped: "bg-red-100 text-red-800",
     suspended: "bg-gray-100 text-gray-800",
-  }
+  };
 
   const sessionTypeIcons = {
     online: <User className="h-4 w-4" />,
     group: <User className="h-4 w-4" />,
     oneOnOne: <User className="h-4 w-4" />,
-  }
+  };
 
   const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    return `${hours}h ${minutes}m`
-  }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <Card className="overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
@@ -334,29 +390,40 @@ function EnrollmentCard({
         />
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
           <div className="flex items-center justify-between">
-            <Badge className={`capitalize ${statusColors[enrollment.currentStatus]}`}>
-              {enrollment.currentStatus.replace('_', ' ')}
+            <Badge
+              className={`capitalize ${statusColors[enrollment.currentStatus]}`}
+            >
+              {enrollment.currentStatus.replace("_", " ")}
             </Badge>
             <Badge variant="outline" className="flex items-center gap-1">
               {sessionTypeIcons[enrollment.enrolledSessionType]}
-              {enrollment.enrolledSessionType.replace('_', ' ')}
+              {enrollment.enrolledSessionType.replace("_", " ")}
             </Badge>
           </div>
         </div>
       </div>
       <CardHeader className="p-4 pb-0">
-        <CardTitle className="line-clamp-1">{enrollment.course.title}</CardTitle>
-        <CardDescription className="line-clamp-2">{enrollment.course.description}</CardDescription>
+        <CardTitle className="line-clamp-1">
+          {enrollment.course.title}
+        </CardTitle>
+        <CardDescription className="line-clamp-2">
+          {enrollment.course.description}
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-2 flex-grow space-y-3">
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
-            <AvatarImage src={enrollment.course.tutor?.avatar} alt={enrollment.course.tutor?.name} />
+            <AvatarImage
+              src={enrollment.course.tutor?.avatar}
+              alt={enrollment.course.tutor?.name}
+            />
             <AvatarFallback>
               {enrollment.course.tutor?.name?.charAt(0) || "T"}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm">{enrollment.course.tutor?.name || "Tutor Name"}</span>
+          <span className="text-sm">
+            {enrollment.course.tutor?.name || "Tutor Name"}
+          </span>
         </div>
 
         <div className="space-y-2">
@@ -366,8 +433,13 @@ function EnrollmentCard({
           </div>
           <Progress value={enrollment.progress.completionPercentage} />
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{completedModules}/{enrollment.course.moduleCount || '?'} modules</span>
-            <span>{completedSections}/{enrollment.course.sectionCount || '?'} sections</span>
+            <span>
+              {completedModules}/{enrollment.course.moduleCount || "?"} modules
+            </span>
+            <span>
+              {completedSections}/{enrollment.course.sectionCount || "?"}{" "}
+              sections
+            </span>
           </div>
         </div>
 
@@ -399,7 +471,8 @@ function EnrollmentCard({
               <BarChart2 className="h-4 w-4" />
               <span className="line-clamp-1">
                 Current: {enrollment.progress.currentModule.title}
-                {enrollment.progress.currentSection && ` - ${enrollment.progress.currentSection.title}`}
+                {enrollment.progress.currentSection &&
+                  ` - ${enrollment.progress.currentSection.title}`}
               </span>
             </div>
           </div>
@@ -408,12 +481,14 @@ function EnrollmentCard({
       <CardFooter className="p-4 pt-0 mt-auto">
         <Button className="w-full" asChild>
           <Link href={`/student/course/${enrollment.course._id}`}>
-            {enrollment.currentStatus === 'completed' ? 'View Course' : 'Continue Learning'}
+            {enrollment.currentStatus === "completed"
+              ? "View Course"
+              : "Continue Learning"}
           </Link>
         </Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
 
 function User({ className }: { className?: string }) {
@@ -433,5 +508,5 @@ function User({ className }: { className?: string }) {
       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
     </svg>
-  )
+  );
 }

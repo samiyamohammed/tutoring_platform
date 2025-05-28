@@ -3,71 +3,96 @@
 import mongoose from "mongoose";
 import ModuleSchema from "./Module.js";
 import QuizSchema from "./Quiz.js";
+import QuestionSchema from "./Question.js";
+import FinalExamSchema from "./FinalExam.js";
+import AssessmentSchema from "./Assessment.js";
 
-const CourseSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  category: { type: String, required: true }, // New field for category
-  level: { type: String, required: true }, // New field for level
-  deadline: { type: Date, required: true }, // New field for deadline
-  tutor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  modules: [ModuleSchema],
-  sessionTypes: [{ // Array of session types with pricing and schedules
-    type: String,
-    enum: ['online', 'group', 'oneOnOne'],
-    required: true,
-  }],
-  pricing: {
-    online: {
-      price: { type: Number, min: 0 },
-      maxStudents: { type: Number, min: 1 },
-      schedule: [{ // Schedule for online sessions
-        day: { type: String },
-        startTime: { type: String },
-        endTime: { type: String },
-      }],
+const CourseSchema = new mongoose.Schema(
+  {
+    image: { type: String },
+    title: { type: String, required: true },
+    description: { type: String, required: true },
+    category: { type: String, required: true }, // New field for category
+    level: { type: String, required: true }, // New field for level
+    deadline: { type: Date, required: true }, // New field for deadline
+    tutor: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    group: {
-      price: { type: Number, min: 0 },
-      maxStudents: { type: Number, min: 1 },
-      schedule: [{ // Schedule for group sessions
-        day: { type: String },
-        startTime: { type: String },
-        endTime: { type: String },
-      }],
+    modules: [ModuleSchema],
+    finalExam: [FinalExamSchema],
+    assessment: AssessmentSchema,
+
+    sessionTypes: [
+      {
+        // Array of session types with pricing and schedules
+        type: String,
+        enum: ["online", "group", "oneOnOne"],
+        required: true,
+      },
+    ],
+    pricing: {
+      online: {
+        price: { type: Number, min: 0 },
+        maxStudents: { type: Number, min: 1 },
+        schedule: [
+          {
+            // Schedule for online sessions
+            day: { type: String },
+            startTime: { type: String },
+            endTime: { type: String },
+          },
+        ],
+      },
+      group: {
+        price: { type: Number, min: 0 },
+        maxStudents: { type: Number, min: 1 },
+        schedule: [
+          {
+            // Schedule for group sessions
+            day: { type: String },
+            startTime: { type: String },
+            endTime: { type: String },
+          },
+        ],
+      },
+      oneOnOne: {
+        price: { type: Number, min: 0 },
+        maxStudents: { type: Number, min: 1 },
+        schedule: [
+          {
+            // Schedule for one-on-one sessions
+            day: { type: String },
+            startTime: { type: String },
+            endTime: { type: String },
+          },
+        ],
+      },
     },
-    oneOnOne: {
-      price: { type: Number, min: 0 },
-      maxStudents: { type: Number, min: 1 },
-      schedule: [{ // Schedule for one-on-one sessions
-        day: { type: String },
-        startTime: { type: String },
-        endTime: { type: String },
-      }],
+    finalExam: FinalExamSchema, // New field for final exam
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
     },
+    capacity: { type: Number },
+    waitingListCapacity: { type: Number, default: 0 },
+    waitingList: [{ type: mongoose.Schema.Types.ObjectId, ref: "WaitingList" }],
   },
-  prerequisites: [{ type: String }],
-  status: {
-    type: String,
-    enum: ['pending', 'approved', 'rejected'],
-    default: 'pending',
-  },
-  capacity: { type: Number },
-  waitingListCapacity: { type: Number, default: 0 },
-  waitingList: [{ type: mongoose.Schema.Types.ObjectId, ref: 'WaitingList' }],
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 // Ensure virtuals are included in JSON output
 CourseSchema.set("toObject", { virtuals: true });
 CourseSchema.set("toJSON", { virtuals: true });
 
-CourseSchema.pre(/^find/, function(next) {
-  this.populate('tutor', 'name email') // Modify here to include fields you want from User // Populate modules if needed
+CourseSchema.pre(/^find/, function (next) {
+  this.populate("tutor", "name email"); // Modify here to include fields you want from User // Populate modules if needed
   next();
 });
 
-
-const Course = mongoose.model('Course', CourseSchema);
+const Course = mongoose.model("Course", CourseSchema);
 
 // Default export
 export default Course;

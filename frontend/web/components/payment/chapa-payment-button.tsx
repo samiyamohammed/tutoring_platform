@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react"
 
 interface ChapaPaymentButtonProps {
@@ -27,7 +27,6 @@ export function ChapaPaymentButton({
   onError,
 }: ChapaPaymentButtonProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
 
   const handlePayment = async () => {
     setIsLoading(true)
@@ -85,11 +84,7 @@ export function ChapaPaymentButton({
       }
     } catch (error) {
       console.error("Payment error:", error)
-      toast({
-        variant: "destructive",
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to process payment",
-      })
+      toast.error("Failed to process payment")
       if (onError) onError(error)
     } finally {
       setIsLoading(false)

@@ -1,5 +1,5 @@
 // src/interfaces/controllers/SessionController.js
-import SessionService from '../../application/services/SessionService.js';
+import SessionService from "../../application/services/SessionService.js";
 
 class SessionController {
   async create(req, res) {
@@ -26,7 +26,7 @@ class SessionController {
       const { id } = req.params;
       const session = await SessionService.getSessionById(id);
       if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
+        return res.status(404).json({ error: "Session not found" });
       }
       res.status(200).json(session);
     } catch (error) {
@@ -34,18 +34,28 @@ class SessionController {
     }
   }
 
-  async getByUserId(req, res) {
-  try {
-    const userId = req.user._id; // Assuming user ID is available in req.user
-    const sessions = await SessionService.getSessionsByUserId(userId);
+  async getByTutorId(req, res) {
+    try {
+      const userId = req.user._id; // Assuming user ID is available in req.user
+      const sessions = await SessionService.getSessionsByTutorId(userId);
 
-    // Always return sessions, even if empty
-    res.status(200).json(sessions);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+      // Always return sessions, even if empty
+      res.status(200).json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
   }
-}
+  async getByStudentId(req, res) {
+    try {
+      const userId = req.user._id; // Assuming user ID is available in req.user
+      const sessions = await SessionService.getSessionsByStudentId(userId);
 
+      // Always return sessions, even if empty
+      res.status(200).json(sessions);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 
   async update(req, res) {
     try {
@@ -53,7 +63,7 @@ class SessionController {
       const sessionData = req.body;
       const session = await SessionService.updateSession(id, sessionData);
       if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
+        return res.status(404).json({ error: "Session not found" });
       }
       res.status(200).json(session);
     } catch (error) {
@@ -66,7 +76,7 @@ class SessionController {
       const { id } = req.params;
       const session = await SessionService.deleteSession(id);
       if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
+        return res.status(404).json({ error: "Session not found" });
       }
       res.status(204).send();
     } catch (error) {

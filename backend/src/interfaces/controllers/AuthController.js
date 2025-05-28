@@ -38,6 +38,35 @@ class AuthController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async sendPasswordResetOTP(req, res) {
+    try {
+      const result = await AuthService.sendPasswordResetOTP(req.body.email);
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
+
+  async verifyResetOTP(req, res) {
+    try {
+      const { email, otp } = req.body;
+      const result = await AuthService.verifyResetOTP(email, otp);
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
+
+  async resetPassword(req, res) {
+    try {
+      const { email, otp, newPassword } = req.body;
+      const result = await AuthService.resetPassword(email, otp, newPassword);
+      res.status(200).json(result);
+    } catch (err) {
+      res.status(400).json({ message: err.message });
+    }
+  }
 }
 
 export default new AuthController();

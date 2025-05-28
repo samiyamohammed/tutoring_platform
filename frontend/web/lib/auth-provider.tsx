@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('${baseUrl}/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: `${firstName} ${lastName}`,
       };
 
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('${baseUrl}/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     setIsLoading(true);
     try {
-      await fetch('http://localhost:5000/api/auth/logout', {
+      await fetch('${baseUrl}/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
       });

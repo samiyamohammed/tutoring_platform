@@ -131,6 +131,134 @@ class UserController {
       res.status(400).json({ message: error.message });
     }
   }
+
+    async addRating(req, res) {
+    const tutorId = req.params.tutorId;
+    const student = req.user.id;
+    const { rating, comment } = req.body;
+    try {
+      // Validate rating
+      if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      }
+
+      const newRating = {
+        student,
+        rating,
+        comment: comment || "",
+        date: new Date()
+      };
+
+      const updatedTutor = await UserService.addTutorRating(tutorId, newRating);
+      if (!updatedTutor) {
+        return res.status(404).json({ message: "Tutor not found" });
+      }
+
+      res.status(201).json(updatedTutor);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Get all ratings for a tutor
+  async getTutorRatings(req, res) {
+    const tutorId = req.params.tutorId;
+
+    try {
+      const ratings = await UserService.getTutorRatings(tutorId);
+      if (!ratings) {
+        return res.status(404).json({ message: "Tutor not found" });
+      }
+      res.status(200).json(ratings);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Get a specific rating
+  async getRating(req, res) {
+    const { tutorId, ratingId } = req.params;
+
+    try {
+      const rating = await UserService.getTutorRating(tutorId, ratingId);
+      if (!rating) {
+        return res.status(404).json({ message: "Rating not found" });
+      }
+      res.status(200).json(rating);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Update a rating (only by the student who created it)
+  async updateRating(req, res) {
+    const { tutorId, ratingId } = req.params;
+    const student = req.user.id;
+    const { rating, comment } = req.body;
+
+    try {
+      // First check if the rating exists and belongs to the student
+      const tutor = await User.findById(tutorId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor not found" });
+      }
+
+      const ratingToUpdate = tutor.ratings.id(ratingId);
+      if (!ratingToUpdate) {
+        return res.status(404).json({ message: "Rating not found" });
+      }
+
+      if (ratingToUpdate.student.toString() !== student) {
+        return res.status(403).json({ message: "You can only update your own ratings" });
+      }
+
+      // Validate new rating if provided
+      if (rating && (rating < 1 || rating > 5)) {
+        return res.status(400).json({ message: "Rating must be between 1 and 5" });
+      }
+
+      const updatedTutor = await UserService.updateTutorRating(
+        tutorId,
+        ratingId,
+        { student, rating, comment }
+      );
+
+      res.status(200).json(updatedTutor);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Delete a rating (only by the student who created it or admin)
+  async deleteRating(req, res) {
+    const { tutorId, ratingId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    try {
+      // First check if the rating exists and belongs to the student or user is admin
+      const tutor = await Tutor.findById(tutorId);
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor not found" });
+      }
+
+      const ratingToDelete = tutor.ratings.id(ratingId);
+      if (!ratingToDelete) {
+        return res.status(404).json({ message: "Rating not found" });
+      }
+
+      if (ratingToDelete.student.toString() !== userId && userRole !== 'admin') {
+        return res.status(403).json({ 
+          message: "You can only delete your own ratings unless you're an admin"
+        });
+      }
+
+      const updatedTutor = await UserService.deleteTutorRating(tutorId, ratingId);
+      res.status(200).json(updatedTutor);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  }
 }
 
 export default new UserController();

@@ -1,41 +1,70 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { Save } from "lucide-react"
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Save } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/components/ui/use-toast"
-import { AdminSidebar } from "@/components/admin-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { AdminSidebar } from "@/components/admin-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const uploadSettingsSchema = z.object({
-  maxFileSize: z.coerce.number().min(1, { message: "Maximum file size must be at least 1MB" }),
-  allowedFileTypes: z.array(z.string()).min(1, { message: "At least one file type must be allowed" }),
-  maxFilesPerUpload: z.coerce.number().min(1, { message: "Maximum files per upload must be at least 1" }),
-  maxTotalStorage: z.coerce.number().min(1, { message: "Maximum total storage must be at least 1GB" }),
+  maxFileSize: z.coerce
+    .number()
+    .min(1, { message: "Maximum file size must be at least 1MB" }),
+  allowedFileTypes: z
+    .array(z.string())
+    .min(1, { message: "At least one file type must be allowed" }),
+  maxFilesPerUpload: z.coerce
+    .number()
+    .min(1, { message: "Maximum files per upload must be at least 1" }),
+  maxTotalStorage: z.coerce
+    .number()
+    .min(1, { message: "Maximum total storage must be at least 1GB" }),
   enableCompression: z.boolean().default(false),
   compressionQuality: z.coerce.number().min(1).max(100).optional(),
   scanForMalware: z.boolean().default(true),
   allowPublicSharing: z.boolean().default(false),
   defaultVisibility: z.enum(["private", "public", "restricted"]),
   autoDeleteAfter: z.coerce.number().min(0).optional(),
-  autoDeleteUnit: z.enum(["days", "weeks", "months", "years", "never"]).default("never"),
-})
+  autoDeleteUnit: z
+    .enum(["days", "weeks", "months", "years", "never"])
+    .default("never"),
+});
 
-type UploadSettingsFormValues = z.infer<typeof uploadSettingsSchema>
+type UploadSettingsFormValues = z.infer<typeof uploadSettingsSchema>;
 
 export default function UploadSettingsPage() {
-  const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<UploadSettingsFormValues>({
     resolver: zodResolver(uploadSettingsSchema) as any,
@@ -52,35 +81,28 @@ export default function UploadSettingsPage() {
       autoDeleteAfter: 0,
       autoDeleteUnit: "never",
     },
-  })
+  });
 
-  const watchEnableCompression = form.watch("enableCompression")
-  const watchAutoDeleteUnit = form.watch("autoDeleteUnit")
+  const watchEnableCompression = form.watch("enableCompression");
+  const watchAutoDeleteUnit = form.watch("autoDeleteUnit");
 
   const onSubmit = async (values: UploadSettingsFormValues) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // This would be replaced with actual API call
-      console.log(values)
+      console.log(values);
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      toast({
-        title: "Settings saved",
-        description: "Upload settings have been updated successfully.",
-      })
+      toast.success("Upload settings have been updated successfully.");
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-      })
+      toast.error("Failed to save settings. Please try again.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <SidebarProvider>
@@ -90,12 +112,17 @@ export default function UploadSettingsPage() {
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div>
               <h1 className="text-lg font-semibold">Upload Settings</h1>
-              <p className="text-sm text-muted-foreground">Configure file upload settings for tutors</p>
+              <p className="text-sm text-muted-foreground">
+                Configure file upload settings for tutors
+              </p>
             </div>
           </div>
           <div className="flex-1 space-y-4 p-8 pt-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-8"
+              >
                 <Tabs defaultValue="general" className="space-y-4">
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="general">General</TabsTrigger>
@@ -106,7 +133,9 @@ export default function UploadSettingsPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>General Upload Settings</CardTitle>
-                        <CardDescription>Configure basic upload settings for tutors</CardDescription>
+                        <CardDescription>
+                          Configure basic upload settings for tutors
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <FormField
@@ -119,7 +148,8 @@ export default function UploadSettingsPage() {
                                 <Input type="number" min={1} {...field} />
                               </FormControl>
                               <FormDescription>
-                                The maximum size of a single file that can be uploaded (in megabytes)
+                                The maximum size of a single file that can be
+                                uploaded (in megabytes)
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -131,9 +161,12 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem>
                               <div className="mb-4">
-                                <FormLabel className="text-base">Allowed File Types</FormLabel>
+                                <FormLabel className="text-base">
+                                  Allowed File Types
+                                </FormLabel>
                                 <FormDescription>
-                                  Select the file types that tutors are allowed to upload
+                                  Select the file types that tutors are allowed
+                                  to upload
                                 </FormDescription>
                               </div>
                               <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -163,17 +196,29 @@ export default function UploadSettingsPage() {
                                         >
                                           <FormControl>
                                             <Checkbox
-                                              checked={field.value?.includes(item.id)}
+                                              checked={field.value?.includes(
+                                                item.id
+                                              )}
                                               onCheckedChange={(checked) => {
                                                 return checked
-                                                  ? field.onChange([...field.value, item.id])
-                                                  : field.onChange(field.value?.filter((value) => value !== item.id))
+                                                  ? field.onChange([
+                                                      ...field.value,
+                                                      item.id,
+                                                    ])
+                                                  : field.onChange(
+                                                      field.value?.filter(
+                                                        (value) =>
+                                                          value !== item.id
+                                                      )
+                                                    );
                                               }}
                                             />
                                           </FormControl>
-                                          <FormLabel className="font-normal">{item.label}</FormLabel>
+                                          <FormLabel className="font-normal">
+                                            {item.label}
+                                          </FormLabel>
                                         </FormItem>
-                                      )
+                                      );
                                     }}
                                   />
                                 ))}
@@ -192,7 +237,8 @@ export default function UploadSettingsPage() {
                                 <Input type="number" min={1} {...field} />
                               </FormControl>
                               <FormDescription>
-                                The maximum number of files that can be uploaded at once
+                                The maximum number of files that can be uploaded
+                                at once
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -204,11 +250,17 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
                               <div className="space-y-1 leading-none">
                                 <FormLabel>Enable Image Compression</FormLabel>
-                                <FormDescription>Automatically compress images to reduce storage usage</FormDescription>
+                                <FormDescription>
+                                  Automatically compress images to reduce
+                                  storage usage
+                                </FormDescription>
                               </div>
                             </FormItem>
                           )}
@@ -221,11 +273,16 @@ export default function UploadSettingsPage() {
                               <FormItem>
                                 <FormLabel>Compression Quality (%)</FormLabel>
                                 <FormControl>
-                                  <Input type="number" min={1} max={100} {...field} />
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    {...field}
+                                  />
                                 </FormControl>
                                 <FormDescription>
-                                  The quality of compressed images (1-100, higher is better quality but larger file
-                                  size)
+                                  The quality of compressed images (1-100,
+                                  higher is better quality but larger file size)
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -239,7 +296,9 @@ export default function UploadSettingsPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>Security Settings</CardTitle>
-                        <CardDescription>Configure security settings for file uploads</CardDescription>
+                        <CardDescription>
+                          Configure security settings for file uploads
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <FormField
@@ -248,12 +307,16 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
                               <div className="space-y-1 leading-none">
                                 <FormLabel>Scan for Malware</FormLabel>
                                 <FormDescription>
-                                  Automatically scan uploaded files for malware and viruses
+                                  Automatically scan uploaded files for malware
+                                  and viruses
                                 </FormDescription>
                               </div>
                             </FormItem>
@@ -265,12 +328,16 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
-                                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
                               <div className="space-y-1 leading-none">
                                 <FormLabel>Allow Public Sharing</FormLabel>
                                 <FormDescription>
-                                  Allow tutors to share files publicly with anyone who has the link
+                                  Allow tutors to share files publicly with
+                                  anyone who has the link
                                 </FormDescription>
                               </div>
                             </FormItem>
@@ -282,19 +349,31 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Default File Visibility</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select default visibility" />
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="private">Private (Only the uploader)</SelectItem>
-                                  <SelectItem value="restricted">Restricted (Enrolled students only)</SelectItem>
-                                  <SelectItem value="public">Public (Anyone with the link)</SelectItem>
+                                  <SelectItem value="private">
+                                    Private (Only the uploader)
+                                  </SelectItem>
+                                  <SelectItem value="restricted">
+                                    Restricted (Enrolled students only)
+                                  </SelectItem>
+                                  <SelectItem value="public">
+                                    Public (Anyone with the link)
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
-                              <FormDescription>The default visibility setting for newly uploaded files</FormDescription>
+                              <FormDescription>
+                                The default visibility setting for newly
+                                uploaded files
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -306,7 +385,9 @@ export default function UploadSettingsPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle>Storage Settings</CardTitle>
-                        <CardDescription>Configure storage settings for file uploads</CardDescription>
+                        <CardDescription>
+                          Configure storage settings for file uploads
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <FormField
@@ -319,7 +400,8 @@ export default function UploadSettingsPage() {
                                 <Input type="number" min={1} {...field} />
                               </FormControl>
                               <FormDescription>
-                                The maximum total storage space allowed per tutor (in gigabytes)
+                                The maximum total storage space allowed per
+                                tutor (in gigabytes)
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -331,7 +413,10 @@ export default function UploadSettingsPage() {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Auto-Delete Unused Files</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select auto-delete period" />
@@ -346,7 +431,8 @@ export default function UploadSettingsPage() {
                                 </SelectContent>
                               </Select>
                               <FormDescription>
-                                Automatically delete files that haven't been accessed for a specified period
+                                Automatically delete files that haven't been
+                                accessed for a specified period
                               </FormDescription>
                               <FormMessage />
                             </FormItem>
@@ -363,7 +449,8 @@ export default function UploadSettingsPage() {
                                   <Input type="number" min={1} {...field} />
                                 </FormControl>
                                 <FormDescription>
-                                  The number of {watchAutoDeleteUnit} after which unused files will be deleted
+                                  The number of {watchAutoDeleteUnit} after
+                                  which unused files will be deleted
                                 </FormDescription>
                                 <FormMessage />
                               </FormItem>
@@ -387,5 +474,5 @@ export default function UploadSettingsPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }

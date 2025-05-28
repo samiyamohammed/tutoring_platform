@@ -21,6 +21,9 @@ export default function VerifyPage() {
 
   const email = searchParams.get("email") || ""
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+
   useEffect(() => {
     if (timeLeft > 0 && !isVerified) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000)
@@ -32,7 +35,7 @@ export default function VerifyPage() {
   setIsLoading(true);
 
   try {
-    const response = await fetch("http://localhost:5000/api/auth/resend-otp", {
+    const response = await fetch(`${baseUrl}/api/auth/resend-otp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -74,7 +77,7 @@ export default function VerifyPage() {
   setIsLoading(true);
 
   try {
-    const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+    const response = await fetch(`${baseUrl}/api/auth/verify-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, otp: verificationCode }),
@@ -120,7 +123,7 @@ export default function VerifyPage() {
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <Link href="/" className="absolute left-4 top-4 flex items-center gap-2 md:left-8 md:top-8">
         <BookOpen className="h-6 w-6" />
-        <span className="font-bold">EduConnect</span>
+        <span className="font-bold">Tutoring Platform</span>
       </Link>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">

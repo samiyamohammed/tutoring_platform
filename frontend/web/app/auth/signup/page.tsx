@@ -33,6 +33,8 @@ const formSchema = z.object({
   }),
 })
 
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+
 export default function SignUpPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -64,7 +66,7 @@ export default function SignUpPage() {
         role,
       };
   
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch('${baseUrl}/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +103,7 @@ export default function SignUpPage() {
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <Link href="/" className="absolute left-4 top-4 flex items-center gap-2 md:left-8 md:top-8">
         <BookOpen className="h-6 w-6" />
-        <span className="font-bold">EduConnect</span>
+        <span className="font-bold">Tutoring Platform</span>
       </Link>
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">

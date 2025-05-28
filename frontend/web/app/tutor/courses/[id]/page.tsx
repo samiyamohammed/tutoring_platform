@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   BarChart3,
   Calendar,
@@ -30,172 +30,208 @@ import {
   PieChart,
   Activity,
   Bookmark,
-} from "lucide-react"
+} from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { TutorSidebar } from "@/components/tutor-sidebar"
-import { SidebarProvider } from "@/components/ui/sidebar"
-import { useToast } from "@/components/ui/use-toast"
-import { Input } from "@/components/ui/input"
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+} from "@/components/ui/dropdown-menu";
+import { TutorSidebar } from "@/components/tutor-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type User = {
-  _id: string
-  name: string
-  email: string
-  avatar?: string
-}
+  _id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+};
 
 type Course = {
-  _id: string
-  title: string
-  description: string
-  tutor: User
-  currentEnrollment: number
-  capacity: number
-  status: 'pending' | 'approved' | 'rejected'
+  _id: string;
+  title: string;
+  description: string;
+  tutor: User;
+  currentEnrollment: number;
+  capacity: number;
+  status: "pending" | "approved" | "rejected";
   pricing: {
-    online?: { price: number }
-    group?: { price: number }
-    oneOnOne?: { price: number }
-  }
-  modules: Module[]
-  createdAt: string
-  category: string
-  level: string
-}
+    online?: { price: number };
+    group?: { price: number };
+    oneOnOne?: { price: number };
+  };
+  modules: Module[];
+  createdAt: string;
+  category: string;
+  level: string;
+};
 
 type Module = {
-  _id: string
-  title: string
-  duration: number
-  order: number
-}
+  _id: string;
+  title: string;
+  duration: number;
+  order: number;
+};
 
 type Enrollment = {
-  _id: string
-  student: User
-  enrolledSessionType: 'online' | 'group' | 'oneOnOne'
-  currentStatus: 'enrolled' | 'in_progress' | 'completed' | 'dropped' | 'suspended'
+  _id: string;
+  student: User;
+  enrolledSessionType: "online" | "group" | "oneOnOne";
+  currentStatus:
+    | "enrolled"
+    | "in_progress"
+    | "completed"
+    | "dropped"
+    | "suspended";
   progress: {
-    completionPercentage: number
+    completionPercentage: number;
     modules: Array<{
-      moduleId: string
-      status: 'not_started' | 'started' | 'completed'
-    }>
-  }
+      moduleId: string;
+      status: "not_started" | "started" | "completed";
+    }>;
+  };
   payment: {
-    amountPaid: number
-    totalAmount: number
-    status: 'pending' | 'partial' | 'paid' | 'refunded' | 'failed'
-  }
-  enrollmentDate: string
-}
+    amountPaid: number;
+    totalAmount: number;
+    status: "pending" | "partial" | "paid" | "refunded" | "failed";
+  };
+  enrollmentDate: string;
+};
 
 export default function CourseDetailPage() {
-  const params = useParams()
-  const courseId = params.id as string
-  const [course, setCourse] = useState<Course | null>(null)
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState("overview")
-  const { toast } = useToast()
+  const params = useParams();
+  const courseId = params.id as string;
+  const [course, setCourse] = useState<Course | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = typeof window !== 'undefined' ? localStorage.getItem("token") || '' : ''
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("token") || ""
+            : "";
 
         // Construct headers object
         const headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
 
         const [courseRes, enrollmentsRes] = await Promise.all([
-          fetch(`http://localhost:5000/api/course/${courseId}`, { headers }),
-          fetch(`http://localhost:5000/api/enrollment/course/${courseId}`, {
-            headers
-          })
+          fetch(`${baseUrl}/api/course/${courseId}`, { headers }),
+          fetch(`${baseUrl}/api/enrollment/course/${courseId}`, {
+            headers,
+          }),
         ]);
 
-        if (!courseRes.ok) throw new Error(`Course fetch failed: ${courseRes.status}`)
+        if (!courseRes.ok)
+          throw new Error(`Course fetch failed: ${courseRes.status}`);
         if (!enrollmentsRes.ok) {
-          const errorData = await enrollmentsRes.json().catch(() => ({}))
+          const errorData = await enrollmentsRes.json().catch(() => ({}));
           throw new Error(
-            `Enrollments fetch failed: ${enrollmentsRes.status} - ${errorData.message || 'Unknown error'}`
-          )
+            `Enrollments fetch failed: ${enrollmentsRes.status} - ${
+              errorData.message || "Unknown error"
+            }`
+          );
         }
 
-        const courseData = await courseRes.json()
-        const enrollmentsData = await enrollmentsRes.json()
+        const courseData = await courseRes.json();
+        const enrollmentsData = await enrollmentsRes.json();
 
-        setCourse(courseData)
-        setEnrollments(enrollmentsData)
+        setCourse(courseData);
+        setEnrollments(enrollmentsData);
       } catch (error) {
-        console.error('Fetch error:', error)
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch data",
-        })
+        console.error("Fetch error:", error);
+        toast.error("Failed to fetch data");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [courseId, toast])
+    fetchData();
+  }, [courseId, toast]);
 
   // Calculate statistics
   const calculateStats = () => {
-    if (!course || enrollments.length === 0) return null
+    if (!course || enrollments.length === 0) return null;
 
-    const totalStudents = enrollments.length
-    const activeStudents = enrollments.filter(e =>
-      ['enrolled', 'in_progress'].includes(e.currentStatus)
-    ).length
-    const completedStudents = enrollments.filter(e =>
-      e.currentStatus === 'completed'
-    ).length
+    const totalStudents = enrollments.length;
+    const activeStudents = enrollments.filter((e) =>
+      ["enrolled", "in_progress"].includes(e.currentStatus)
+    ).length;
+    const completedStudents = enrollments.filter(
+      (e) => e.currentStatus === "completed"
+    ).length;
 
-    const completionRate = Math.round((completedStudents / totalStudents) * 100)
+    const completionRate = Math.round(
+      (completedStudents / totalStudents) * 100
+    );
     const averageProgress = Math.round(
-      enrollments.reduce((sum, e) => sum + e.progress.completionPercentage, 0) / totalStudents
-    )
+      enrollments.reduce((sum, e) => sum + e.progress.completionPercentage, 0) /
+        totalStudents
+    );
 
-    const revenue = enrollments.reduce((sum, e) => sum + e.payment.amountPaid, 0)
-    const potentialRevenue = enrollments.reduce((sum, e) => sum + e.payment.totalAmount, 0)
+    const revenue = enrollments.reduce(
+      (sum, e) => sum + e.payment.amountPaid,
+      0
+    );
+    const potentialRevenue = enrollments.reduce(
+      (sum, e) => sum + e.payment.totalAmount,
+      0
+    );
 
-    const moduleCompletion = course.modules.map(module => {
+    const moduleCompletion = course.modules.map((module) => {
       const completedCount = enrollments.reduce((count, e) => {
-        const moduleProgress = e.progress.modules.find(m => m.moduleId === module._id)
-        return count + (moduleProgress?.status === 'completed' ? 1 : 0)
-      }, 0)
+        const moduleProgress = e.progress.modules.find(
+          (m) => m.moduleId === module._id
+        );
+        return count + (moduleProgress?.status === "completed" ? 1 : 0);
+      }, 0);
       return {
         moduleId: module._id,
         title: module.title,
-        completionRate: Math.round((completedCount / totalStudents) * 100)
-      }
-    })
+        completionRate: Math.round((completedCount / totalStudents) * 100),
+      };
+    });
 
     const enrollmentTypes = {
-      online: enrollments.filter(e => e.enrolledSessionType === 'online').length,
-      group: enrollments.filter(e => e.enrolledSessionType === 'group').length,
-      oneOnOne: enrollments.filter(e => e.enrolledSessionType === 'oneOnOne').length
-    }
+      online: enrollments.filter((e) => e.enrolledSessionType === "online")
+        .length,
+      group: enrollments.filter((e) => e.enrolledSessionType === "group")
+        .length,
+      oneOnOne: enrollments.filter((e) => e.enrolledSessionType === "oneOnOne")
+        .length,
+    };
 
     return {
       totalStudents,
@@ -206,11 +242,11 @@ export default function CourseDetailPage() {
       revenue,
       potentialRevenue,
       moduleCompletion,
-      enrollmentTypes
-    }
-  }
+      enrollmentTypes,
+    };
+  };
 
-  const stats = calculateStats()
+  const stats = calculateStats();
 
   if (loading) {
     return (
@@ -220,7 +256,10 @@ export default function CourseDetailPage() {
           <main className="flex flex-col">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2">
-                <Link href="/tutor/courses" className="text-sm text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/tutor/courses"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
                   Courses
                 </Link>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -233,7 +272,7 @@ export default function CourseDetailPage() {
           </main>
         </div>
       </SidebarProvider>
-    )
+    );
   }
 
   if (!course) {
@@ -244,7 +283,10 @@ export default function CourseDetailPage() {
           <main className="flex flex-col">
             <div className="flex items-center justify-between border-b px-4 py-3">
               <div className="flex items-center gap-2">
-                <Link href="/tutor/courses" className="text-sm text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/tutor/courses"
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
                   Courses
                 </Link>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -255,19 +297,35 @@ export default function CourseDetailPage() {
               <div className="text-center">
                 <h3 className="text-lg font-medium">Course not found</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  The course you're looking for doesn't exist or you don't have access to it
+                  The course you're looking for doesn't exist or you don't have
+                  access to it
                 </p>
                 <Button className="mt-4" asChild>
-                  <Link href="/tutor/courses">
-                    Back to Courses
-                  </Link>
+                  <Link href="/tutor/courses">Back to Courses</Link>
                 </Button>
               </div>
             </div>
           </main>
         </div>
       </SidebarProvider>
-    )
+    );
+  }
+
+  const categoryImageMap: Record<string, string> = {
+    mathematics: "/mathematicss.jpeg",
+    science: "/science.jpeg",
+    language: "/language.jpeg",
+    music: "/music.jpeg",
+    marketing: "/marketing.png",
+    business: "/business.jpeg",
+    design: "/fashion.jpeg",
+    programming: "/programing.jpeg",
+  };
+
+  function getImageByCategory(category: string): string {
+    // Convert to lowercase for case-insensitive matching
+    const lowerCategory = category.toLowerCase();
+    return categoryImageMap[lowerCategory] || "/defaultt.jpeg";
   }
 
   return (
@@ -277,7 +335,10 @@ export default function CourseDetailPage() {
         <main className="flex flex-col">
           <div className="flex items-center justify-between border-b px-4 py-3">
             <div className="flex items-center gap-2">
-              <Link href="/tutor/courses" className="text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                href="/tutor/courses"
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
                 Courses
               </Link>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -316,18 +377,23 @@ export default function CourseDetailPage() {
                 <CardHeader className="flex flex-row items-start justify-between space-y-0">
                   <div>
                     <CardTitle className="text-2xl">{course.title}</CardTitle>
-                    <CardDescription className="mt-1">{course.description}</CardDescription>
+                    <CardDescription className="mt-1">
+                      {course.description}
+                    </CardDescription>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Badge variant="outline">{course.category}</Badge>
                       <Badge variant="outline">{course.level}</Badge>
                       <Badge
                         variant={
-                          course.status === "approved" ? "default" :
-                            course.status === "pending" ? "outline" :
-                              "destructive"
+                          course.status === "approved"
+                            ? "default"
+                            : course.status === "pending"
+                            ? "outline"
+                            : "destructive"
                         }
                       >
-                        {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
+                        {course.status.charAt(0).toUpperCase() +
+                          course.status.slice(1)}
                       </Badge>
                     </div>
                   </div>
@@ -341,7 +407,8 @@ export default function CourseDetailPage() {
                     <div className="mt-1 flex items-center text-sm text-muted-foreground">
                       <Calendar className="mr-1 h-4 w-4" />
                       <span>
-                        Created {new Date(course.createdAt).toLocaleDateString()}
+                        Created{" "}
+                        {new Date(course.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>
@@ -349,7 +416,13 @@ export default function CourseDetailPage() {
                 <CardContent>
                   <div className="aspect-video w-full overflow-hidden rounded-md border bg-muted">
                     <div className="flex h-full items-center justify-center">
-                      <Video className="h-16 w-16 text-muted-foreground" />
+                      <img
+                        src={getImageByCategory(course.category)}
+                        width={550}
+                        height={550}
+                        alt={`${course.category} image`}
+                        className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full lg:order-last"
+                      />
                     </div>
                   </div>
                 </CardContent>
@@ -422,7 +495,11 @@ export default function CourseDetailPage() {
               </Card>
             </div>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="space-y-4"
+            >
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="students">Students</TabsTrigger>
@@ -435,7 +512,9 @@ export default function CourseDetailPage() {
                   <Card className="col-span-full lg:col-span-4">
                     <CardHeader>
                       <CardTitle>Course Progress</CardTitle>
-                      <CardDescription>Module completion by students</CardDescription>
+                      <CardDescription>
+                        Module completion by students
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       {course.modules.length > 0 && stats ? (
@@ -458,8 +537,12 @@ export default function CourseDetailPage() {
                       ) : (
                         <div className="flex flex-col items-center justify-center py-6 text-center">
                           <BookOpen className="h-10 w-10 text-muted-foreground mb-2" />
-                          <h3 className="text-lg font-medium">No modules yet</h3>
-                          <p className="text-sm text-muted-foreground mt-1">Add modules to your course</p>
+                          <h3 className="text-lg font-medium">
+                            No modules yet
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Add modules to your course
+                          </p>
                         </div>
                       )}
                     </CardContent>
@@ -468,7 +551,9 @@ export default function CourseDetailPage() {
                   <Card className="col-span-full lg:col-span-3">
                     <CardHeader>
                       <CardTitle>Student Status</CardTitle>
-                      <CardDescription>Distribution of student progress</CardDescription>
+                      <CardDescription>
+                        Distribution of student progress
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       {stats ? (
@@ -479,11 +564,18 @@ export default function CourseDetailPage() {
                               <span className="text-sm">Enrolled</span>
                             </div>
                             <span className="text-sm font-medium">
-                              {stats.activeStudents} ({Math.round((stats.activeStudents / stats.totalStudents) * 100)}%)
+                              {stats.activeStudents} (
+                              {Math.round(
+                                (stats.activeStudents / stats.totalStudents) *
+                                  100
+                              )}
+                              %)
                             </span>
                           </div>
                           <Progress
-                            value={(stats.activeStudents / stats.totalStudents) * 100}
+                            value={
+                              (stats.activeStudents / stats.totalStudents) * 100
+                            }
                             className="h-2 bg-blue-100"
                           />
 
@@ -493,7 +585,8 @@ export default function CourseDetailPage() {
                               <span className="text-sm">Completed</span>
                             </div>
                             <span className="text-sm font-medium">
-                              {stats.completedStudents} ({stats.completionRate}%)
+                              {stats.completedStudents} ({stats.completionRate}
+                              %)
                             </span>
                           </div>
                           <Progress
@@ -507,21 +600,40 @@ export default function CourseDetailPage() {
                               <span className="text-sm">In Progress</span>
                             </div>
                             <span className="text-sm font-medium">
-                              {stats.totalStudents - stats.completedStudents - stats.activeStudents} (
-                              {Math.round(((stats.totalStudents - stats.completedStudents - stats.activeStudents) / stats.totalStudents) * 100)}
+                              {stats.totalStudents -
+                                stats.completedStudents -
+                                stats.activeStudents}{" "}
+                              (
+                              {Math.round(
+                                ((stats.totalStudents -
+                                  stats.completedStudents -
+                                  stats.activeStudents) /
+                                  stats.totalStudents) *
+                                  100
+                              )}
                               %)
                             </span>
                           </div>
                           <Progress
-                            value={((stats.totalStudents - stats.completedStudents - stats.activeStudents) / stats.totalStudents) * 100}
+                            value={
+                              ((stats.totalStudents -
+                                stats.completedStudents -
+                                stats.activeStudents) /
+                                stats.totalStudents) *
+                              100
+                            }
                             className="h-2 bg-yellow-100"
                           />
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-6 text-center">
                           <Users className="h-10 w-10 text-muted-foreground mb-2" />
-                          <h3 className="text-lg font-medium">No students yet</h3>
-                          <p className="text-sm text-muted-foreground mt-1">Students will appear when they enroll</p>
+                          <h3 className="text-lg font-medium">
+                            No students yet
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Students will appear when they enroll
+                          </p>
                         </div>
                       )}
                     </CardContent>
@@ -535,7 +647,9 @@ export default function CourseDetailPage() {
                     <div>
                       <CardTitle>Enrolled Students</CardTitle>
                       <CardDescription>
-                        {stats?.totalStudents || 0} students enrolled ({course.capacity - (stats?.totalStudents || 0)} spots remaining)
+                        {stats?.totalStudents || 0} students enrolled (
+                        {course.capacity - (stats?.totalStudents || 0)} spots
+                        remaining)
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -549,15 +663,30 @@ export default function CourseDetailPage() {
                     {enrollments.length > 0 ? (
                       <div className="space-y-4">
                         {enrollments.map((enrollment) => (
-                          <div key={enrollment._id} className="flex items-center justify-between rounded-lg border p-4">
+                          <div
+                            key={enrollment._id}
+                            className="flex items-center justify-between rounded-lg border p-4"
+                          >
                             <div className="flex items-center gap-3">
                               <Avatar>
-                                <AvatarImage src={enrollment.student.avatar || "/placeholder.svg"} alt={enrollment.student.name} />
-                                <AvatarFallback>{enrollment.student.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage
+                                  src={
+                                    enrollment.student.avatar ||
+                                    "/placeholder.svg"
+                                  }
+                                  alt={enrollment.student.name}
+                                />
+                                <AvatarFallback>
+                                  {enrollment.student.name.charAt(0)}
+                                </AvatarFallback>
                               </Avatar>
                               <div>
-                                <div className="font-medium">{enrollment.student.name}</div>
-                                <div className="text-sm text-muted-foreground">{enrollment.student.email}</div>
+                                <div className="font-medium">
+                                  {enrollment.student.name}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  {enrollment.student.email}
+                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -566,22 +695,27 @@ export default function CourseDetailPage() {
                                   enrollment.enrolledSessionType === "oneOnOne"
                                     ? "default"
                                     : enrollment.enrolledSessionType === "group"
-                                      ? "secondary"
-                                      : "outline"
+                                    ? "secondary"
+                                    : "outline"
                                 }
                               >
                                 {enrollment.enrolledSessionType === "oneOnOne"
                                   ? "1-on-1"
                                   : enrollment.enrolledSessionType === "group"
-                                    ? "Group"
-                                    : "Online"}
+                                  ? "Group"
+                                  : "Online"}
                               </Badge>
                               <div className="flex items-center gap-1 text-sm">
                                 <span>Progress:</span>
-                                <span className="font-medium">{enrollment.progress.completionPercentage}%</span>
+                                <span className="font-medium">
+                                  {enrollment.progress.completionPercentage}%
+                                </span>
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                Enrolled: {new Date(enrollment.enrollmentDate).toLocaleDateString()}
+                                Enrolled:{" "}
+                                {new Date(
+                                  enrollment.enrollmentDate
+                                ).toLocaleDateString()}
                               </div>
                               <Button variant="ghost" size="sm">
                                 <ChevronRight className="h-4 w-4" />
@@ -593,8 +727,12 @@ export default function CourseDetailPage() {
                     ) : (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
                         <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                        <h3 className="text-lg font-medium">No students enrolled</h3>
-                        <p className="text-sm text-muted-foreground mt-1">Students will appear here when they enroll</p>
+                        <h3 className="text-lg font-medium">
+                          No students enrolled
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Students will appear here when they enroll
+                        </p>
                       </div>
                     )}
                   </CardContent>
@@ -606,7 +744,9 @@ export default function CourseDetailPage() {
                   <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                       <CardTitle>Course Content</CardTitle>
-                      <CardDescription>{course.modules.length} modules in this course</CardDescription>
+                      <CardDescription>
+                        {course.modules.length} modules in this course
+                      </CardDescription>
                     </div>
                     <Button asChild>
                       <Link href={`/tutor/courses/${courseId}/modules`}>
@@ -619,14 +759,21 @@ export default function CourseDetailPage() {
                     {course.modules.length > 0 ? (
                       <div className="space-y-4">
                         {course.modules.map((module) => (
-                          <div key={module._id} className="border rounded-lg overflow-hidden">
+                          <div
+                            key={module._id}
+                            className="border rounded-lg overflow-hidden"
+                          >
                             <div className="flex items-center justify-between p-4 bg-muted/50">
                               <div className="flex items-center gap-4">
                                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background border">
-                                  <span className="font-medium">{module.order}</span>
+                                  <span className="font-medium">
+                                    {module.order}
+                                  </span>
                                 </div>
                                 <div>
-                                  <h3 className="font-medium">{module.title}</h3>
+                                  <h3 className="font-medium">
+                                    {module.title}
+                                  </h3>
                                   <p className="text-sm text-muted-foreground">
                                     Duration: {module.duration} minutes
                                   </p>
@@ -662,7 +809,9 @@ export default function CourseDetailPage() {
                   <Card className="col-span-full">
                     <CardHeader>
                       <CardTitle>Course Analytics</CardTitle>
-                      <CardDescription>Key metrics for your course</CardDescription>
+                      <CardDescription>
+                        Key metrics for your course
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -723,8 +872,12 @@ export default function CourseDetailPage() {
                             </span>
                             <span className="font-medium">
                               {stats?.enrollmentTypes.online || 0} (
-                              {Math.round(((stats?.enrollmentTypes.online || 0) / (stats?.totalStudents || 1)) * 100)}%
-                              )
+                              {Math.round(
+                                ((stats?.enrollmentTypes.online || 0) /
+                                  (stats?.totalStudents || 1)) *
+                                  100
+                              )}
+                              % )
                             </span>
                           </div>
                         )}
@@ -736,8 +889,12 @@ export default function CourseDetailPage() {
                             </span>
                             <span className="font-medium">
                               {stats?.enrollmentTypes.group || 0} (
-                              {Math.round(((stats?.enrollmentTypes.group || 0) / (stats?.totalStudents || 1)) * 100)}%
-                              )
+                              {Math.round(
+                                ((stats?.enrollmentTypes.group || 0) /
+                                  (stats?.totalStudents || 1)) *
+                                  100
+                              )}
+                              % )
                             </span>
                           </div>
                         )}
@@ -749,8 +906,12 @@ export default function CourseDetailPage() {
                             </span>
                             <span className="font-medium">
                               {stats?.enrollmentTypes.oneOnOne || 0} (
-                              {Math.round(((stats?.enrollmentTypes.oneOnOne || 0) / (stats?.totalStudents || 1)) * 100)}%
-                              )
+                              {Math.round(
+                                ((stats?.enrollmentTypes.oneOnOne || 0) /
+                                  (stats?.totalStudents || 1)) *
+                                  100
+                              )}
+                              % )
                             </span>
                           </div>
                         )}
@@ -775,5 +936,5 @@ export default function CourseDetailPage() {
         </main>
       </div>
     </SidebarProvider>
-  )
+  );
 }

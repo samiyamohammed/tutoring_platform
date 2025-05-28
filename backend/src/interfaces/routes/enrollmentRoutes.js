@@ -1,27 +1,55 @@
-import express from 'express';
-import enrollmentController from '../controllers/EnrollmentController.js';
+import express from "express";
+import enrollmentController from "../controllers/EnrollmentController.js";
 
 const router = express.Router();
 
-router.get("/",  enrollmentController.getAllEnrollments);  // Student enrolls in a course
-router.post("/enroll",  enrollmentController.enrollStudent);  // Student enrolls in a course
-router.get("/mycourses",  enrollmentController.getEnrollments);  // Get all enrollments for a student
-router.get("/tutor",  enrollmentController.getTutorEnrollments);  // Get all enrollments for a student
-router.get("/course/:id",  enrollmentController.getCourseEnrollments);  // Get all enrollments for a student
-router.get("/:id",  enrollmentController.getEnrollmentById);  // Get all enrollments for a student
-router.put("/:id",  enrollmentController.updateEnrollment);  // Update enrollment status
-router.get("/currentenrollment/:courseId",  enrollmentController.getCurrentEnrollment);  // Get all enrollments for a student
-router.put("/status",  enrollmentController.updateEnrollmentStatus);  // Update enrollment status
+router.get("/", enrollmentController.getAllEnrollments); // Student enrolls in a course
+router.post("/enroll", enrollmentController.enrollStudent); // Student enrolls in a course
+router.get("/mycourses", enrollmentController.getEnrollments); // Get all enrollments for a student
+router.get("/tutor", enrollmentController.getTutorEnrollments); // Get all enrollments for a student
+router.get("/course/:id", enrollmentController.getCourseEnrollments); // Get all enrollments for a student
+router.get("/:id", enrollmentController.getEnrollmentById); // Get all enrollments for a student
+router.put("/:id", enrollmentController.updateEnrollment); // Update enrollment status
+router.get(
+  "/currentenrollment/:courseId",
+  enrollmentController.getCurrentEnrollment
+); // Get all enrollments for a student
+router.put("/status", enrollmentController.updateEnrollmentStatus); // Update enrollment status
 // Update progress
-router.put('/:enrollmentId/progress', enrollmentController.updateProgress);
+router.put("/:enrollmentId/progress", enrollmentController.updateProgress);
 
 // Mark section as complete
-router.put('/:enrollmentId/complete-section', enrollmentController.markSectionComplete);
+router.put(
+  "/:enrollmentId/complete-section",
+  enrollmentController.markSectionComplete
+);
 
 // Add note to section
-router.post('/:enrollmentId/add-note', enrollmentController.addNoteToSection);
+router.post("/:enrollmentId/add-note", enrollmentController.addNoteToSection);
 
 // Submit quiz
-router.post('/:enrollmentId/submit-quiz', enrollmentController.submitQuiz);
+router.post("/:enrollmentId/submit-quiz", enrollmentController.submitQuiz);
+// Add these to the router (router.js)
+router.post(
+  "/:enrollmentId/start-final-exam",
+  enrollmentController.startFinalExam
+);
+router.post(
+  "/:enrollmentId/submit-final-exam",
+  enrollmentController.submitFinalExam
+);
+
+router.post(
+  "/:enrollmentId/assessments/pre",
+  enrollmentController.submitPreAssessment
+);
+router.post(
+  "/:enrollmentId/assessments/post",
+  enrollmentController.submitPostAssessment
+);
+router.get(
+  "/:enrollmentId/assessments",
+  enrollmentController.getAssessmentResponses
+);
 
 export default router;

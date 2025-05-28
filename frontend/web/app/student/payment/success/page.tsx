@@ -16,12 +16,11 @@ import {
 } from "@/components/ui/card"
 import { StudentSidebar } from "@/components/student-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 
 export default function PaymentSuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { toast } = useToast()
   const [paymentDetails, setPaymentDetails] = useState({
     txRef: "",
     amount: "0.00",
@@ -32,7 +31,8 @@ export default function PaymentSuccessPage() {
     paymentOption: ""
   })
   const [enrollmentStatus, setEnrollmentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle')
-
+  const baseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
   useEffect(() => {
     const txRef = searchParams.get("tx_ref") || ""
     const courseId = localStorage.getItem("lastPaidCourseId") || ""
@@ -89,7 +89,7 @@ export default function PaymentSuccessPage() {
       }
 
       console.log("Enrollment Data:", enrollmentData)
-      const response = await fetch("http://localhost:5000/api/enrollment/enroll", {
+      const response = await fetch(`${baseUrl}/api/enrollment/enroll`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -115,11 +115,7 @@ export default function PaymentSuccessPage() {
     } catch (error) {
       console.error("Enrollment creation failed:", error)
       setEnrollmentStatus('error')
-      toast({
-        variant: "destructive",
-        title: "Enrollment Error",
-        description: error instanceof Error ? error.message : "Failed to complete enrollment"
-      })
+      toast.error("Enrollment Error: " + (error instanceof Error ? error.message : "Failed to complete enrollment"))
     }
   }
 

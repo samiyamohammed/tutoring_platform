@@ -11,6 +11,18 @@ const PaymentStatus = ['pending', 'partial', 'paid', 'refunded', 'failed'];
 const SessionTypes = ['online', 'group', 'oneOnOne'];
 const ResourceTypes = ['text', 'video', 'pdf', 'quiz'];
 
+const finalExamAttemptSchema = new mongoose.Schema({
+  attemptNumber: { type: Number, required: true },
+  startedAt: { type: Date, default: Date.now },
+  submittedAt: Date,
+  durationUsed: Number, // in minutes
+  score: { type: Number },
+  passed: { type: Boolean },
+  answers: mongoose.Schema.Types.Mixed, // Key-value: questionId => answer
+  feedback: String
+});
+
+
 // Subschemas
 const noteSchema = new mongoose.Schema({
   content: { type: String, required: true },
@@ -19,10 +31,10 @@ const noteSchema = new mongoose.Schema({
 
 const sectionProgressSchema = new mongoose.Schema({
   sectionId: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: ['not_started', 'in_progress', 'completed'], 
-    default: 'not_started' 
+  status: {
+    type: String,
+    enum: ['not_started', 'in_progress', 'completed'],
+    default: 'not_started'
   },
   startedAt: Date,
   completedAt: Date,
@@ -41,10 +53,10 @@ const TransactionSchema = new Schema({
 
 const moduleProgressSchema = new mongoose.Schema({
   moduleId: { type: String, required: true },
-  status: { 
-    type: String, 
-    enum: ['not_started', 'started', 'completed'], 
-    default: 'not_started' 
+  status: {
+    type: String,
+    enum: ['not_started', 'started', 'completed'],
+    default: 'not_started'
   },
   startedAt: Date,
   completedAt: Date,
@@ -88,10 +100,10 @@ const quizAttemptSchema = new mongoose.Schema({
 
 const assessmentProgressSchema = new mongoose.Schema({
   assessmentId: { type: String, required: true },
-  assessmentType: { 
-    type: String, 
-    enum: ['quiz', 'assignment', 'exam'], 
-    required: true 
+  assessmentType: {
+    type: String,
+    enum: ['quiz', 'assignment', 'exam'],
+    required: true
   },
   sectionId: { type: String, required: true },
   attempts: [quizAttemptSchema],
@@ -100,12 +112,42 @@ const assessmentProgressSchema = new mongoose.Schema({
   required: { type: Boolean, default: true }
 });
 
+const assessmentResponseSchema = new mongoose.Schema({
+  questionId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  questionText: { type: String, required: true },
+  response: { type: String, required: true },
+  correctAnswer: { type: String }, // Optional, for review/comparison
+  isCorrect: { type: Boolean }, // Optional: Calculated on submission if applicable
+  answeredAt: { type: Date, default: Date.now }
+}, { _id: false });
+
+
 const certificationSchema = new mongoose.Schema({
   eligible: { type: Boolean, default: false },
   issued: { type: Boolean, default: false },
   issuedAt: Date,
-  certificateId: String,
-  expirationDate: Date
+  expirationDate: Date,
+  certificateId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  fileId: {
+    type: mongoose.Types.ObjectId,
+    ref: 'uploads.files'
+  },
+  downloadUrl: String,
+  issuedBy: {
+    type: mongoose.Types.ObjectId,
+    ref: 'User'
+  },
+  templateUsed: String,
+  revoked: {
+    type: Boolean,
+    default: false
+  },
+  revokedAt: Date,
+  revocationReason: String
 });
 
 const EnrollmentSchema = new Schema({
@@ -143,6 +185,10 @@ const EnrollmentSchema = new Schema({
 
   certification: certificationSchema,
 
+  assessmentResponses: {
+    preAssessment: [assessmentResponseSchema],
+    postAssessment: [assessmentResponseSchema]
+  },
   // Payment and other fields remain the same...
   payment: {
     status: { type: String, enum: PaymentStatus, default: 'pending' },
@@ -165,7 +211,26 @@ const EnrollmentSchema = new Schema({
     deviceInfo: [String],
     ipAddresses: [String],
     referralSource: String
+  },  
+
+  // In your Enrollment model schema
+  finalExam: {
+    attempts: [{
+      attemptNumber: Number,
+      startedAt: Date,
+      submittedAt: Date,
+      durationUsed: Number, // in minutes
+      score: Number,
+      passed: Boolean,
+      answers: mongoose.Schema.Types.Mixed,
+      feedback: String
+    }],
+    bestScore: Number,
+    passed: Boolean,
+    taken: Boolean,
+    lastAttemptDate: Date
   },
+
 
   activityLog: [ActivityLogSchema]
 
@@ -177,14 +242,17 @@ EnrollmentSchema.virtual('isCompleted').get(function () {
 });
 
 EnrollmentSchema.virtual('completedModules').get(function () {
+  if (!this.progress?.modules) return 0;
   return this.progress.modules.filter(m => m.status === 'completed').length;
 });
 
 EnrollmentSchema.virtual('completedSections').get(function () {
+  if (!this.progress?.modules) return 0;
   return this.progress.modules.reduce((acc, module) => {
-    return acc + module.sections.filter(s => s.status === 'completed').length;
+    return acc + (module.sections?.filter(s => s.status === 'completed').length || 0);
   }, 0);
 });
+
 
 // Indexes
 EnrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
@@ -193,24 +261,14 @@ EnrollmentSchema.index({ 'progress.currentModule': 1 });
 EnrollmentSchema.index({ 'progress.currentSection': 1 });
 EnrollmentSchema.index({ 'progress.modules.sections.sectionId': 1 });
 
-// Middleware to update completion percentage when progress changes
 EnrollmentSchema.pre('save', function (next) {
-  if (this.isModified('progress')) {
-    const totalModules = this.populated('course')?.modules?.length || 0;
-    const totalSections = this.populated('course')?.modules?.reduce((acc, mod) =>
-      acc + (mod.sections?.length || 0), 0) || 0;
-
-    if (totalModules > 0 && totalSections > 0) {
-      const completedModules = this.progress.modules.filter(m => m.status === 'completed').length;
-      const completedSections = this.progress.modules.reduce((acc, module) =>
-        acc + module.sections.filter(s => s.status === 'completed').length, 0);
-
-      // Weighted average (50% modules, 50% sections)
-      this.progress.completionPercentage = Math.round(
-        ((completedModules / totalModules) * 50) +
-        ((completedSections / totalSections) * 50)
-      );
-    }
+  // Update completion percentage before saving
+  if (this.progress?.modules) {
+    const totalModules = this.progress.modules.length;
+    const completedModules = this.progress.modules.filter(m => m.status === 'completed').length;
+    this.progress.completionPercentage = totalModules > 0
+      ? Math.round((completedModules / totalModules) * 100)
+      : 0;
   }
   next();
 });

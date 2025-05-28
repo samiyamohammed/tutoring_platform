@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, X, Check, List, ArrowUpDown } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { apiClient } from "@/lib/api";
 
 interface User {
@@ -64,10 +64,11 @@ interface Session {
   sessionType: "video" | "in-person" | "group" | "oneOnOne";
   status: "pending" | "approved" | "declined" | "completed" | "cancelled";
   scheduledDate: string;
-  startTime?: string;
-  endTime?: string;
+  startTime: string;
+  endTime: string;
   videoConferenceLink?: string;
   notes?: string;
+  rejectionReason?: string;
   requestDate: string;
   createdAt: string;
   updatedAt: string;
@@ -75,7 +76,6 @@ interface Session {
 
 export default function SessionsPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("sessions");
   const [calendarView, setCalendarView] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,41 +91,54 @@ export default function SessionsPage() {
     dateRange: "all",
     sessionFormat: "all",
   });
+  const [declineReason, setDeclineReason] = useState("");
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState("");
 
   useEffect(() => {
     const fetchSessions = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/session/tutor', {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+        const response = await fetch(
+          "http://localhost:5000/api/session/tutor",
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        setSessions(data);
-        setFilteredSessions(data);
+
+        const validatedSessions = data.map((session: any) => ({
+          ...session,
+          startTime: session.startTime || "",
+          endTime: session.endTime || "",
+          scheduledDate: session.scheduledDate || new Date().toISOString(),
+        }));
+
+        setSessions(validatedSessions);
+        setFilteredSessions(validatedSessions);
       } catch (error) {
         console.error("Error fetching sessions:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description:
-            error instanceof Error ? error.message : "Failed to fetch sessions",
-        });
+        toast.error(
+          error instanceof Error ? error.message : "Failed to fetch sessions"
+        );
+        setSessions([]);
+        setFilteredSessions([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchSessions();
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     let result = [...sessions];
@@ -138,17 +151,21 @@ export default function SessionsPage() {
     if (filter.type !== "all") {
       result = result.filter((session) => {
         if (filter.type === "video") return session.sessionType === "video";
-        if (filter.type === "in-person") return session.sessionType === "in-person";
+        if (filter.type === "in-person")
+          return session.sessionType === "in-person";
         if (filter.type === "group") return session.sessionType === "group";
-        if (filter.type === "oneOnOne") return session.sessionType === "oneOnOne";
+        if (filter.type === "oneOnOne")
+          return session.sessionType === "oneOnOne";
         return true;
       });
     }
 
     if (filter.sessionFormat !== "all") {
       result = result.filter((session) => {
-        if (filter.sessionFormat === "online") return session.sessionType === "video";
-        if (filter.sessionFormat === "in-person") return session.sessionType === "in-person";
+        if (filter.sessionFormat === "online")
+          return session.sessionType === "video";
+        if (filter.sessionFormat === "in-person")
+          return session.sessionType === "in-person";
         return true;
       });
     }
@@ -178,11 +195,10 @@ export default function SessionsPage() {
     // Apply sorting
     if (sortConfig !== null) {
       result.sort((a, b) => {
-        // Handle nested properties
         let aValue: any, bValue: any;
-        
-        if (sortConfig.key.includes('.')) {
-          const keys = sortConfig.key.split('.');
+
+        if (sortConfig.key.includes(".")) {
+          const keys = sortConfig.key.split(".");
           aValue = keys.reduce((obj: any, key) => obj?.[key], a);
           bValue = keys.reduce((obj: any, key) => obj?.[key], b);
         } else {
@@ -217,32 +233,51 @@ export default function SessionsPage() {
 
   const handleStatusChange = async (
     id: string,
-    status: "approved" | "declined" | "cancelled"
+    status: "approved" | "declined" | "cancelled",
+    reason?: string
   ) => {
     try {
-      const response = await apiClient.put(`/session/${id}`, { status });
-
-      if (response.error) {
-        throw new Error(response.error);
+      const payload: {
+        status: "approved" | "declined" | "cancelled";
+        rejectionReason?: string;
+      } = { status };
+      if (status === "declined" && reason) {
+        payload.rejectionReason = reason;
       }
 
-      toast({ title: `Session ${status} successfully` });
+      const response = await fetch(`http://localhost:5000/api/session/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      toast(`Session ${status} successfully`);
       setSessions(
         sessions.map((session) =>
-          session._id === id ? { ...session, status } : session
+          session._id === id
+            ? { ...session, status, rejectionReason: reason || "" }
+            : session
         )
       );
+
+      if (status === "declined") {
+        setShowDeclineModal(false);
+        setDeclineReason("");
+      }
     } catch (error) {
       console.error("Error changing session status:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : `Failed to ${status} session`,
-      });
+      toast.error(
+        error instanceof Error ? error.message : `Failed to ${status} session`
+      );
     }
+  };
+
+  const openDeclineModal = (id: string) => {
+    setCurrentSessionId(id);
+    setShowDeclineModal(true);
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -253,16 +288,13 @@ export default function SessionsPage() {
         throw new Error(response.error);
       }
 
-      toast({ title: "Session deleted successfully" });
+      toast("Session deleted successfully");
       setSessions(sessions.filter((session) => session._id !== id));
     } catch (error) {
       console.error("Error deleting session:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete session",
-      });
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete session"
+      );
     }
   };
 
@@ -270,34 +302,94 @@ export default function SessionsPage() {
     if (session.sessionType === "video" && session.videoConferenceLink) {
       window.open(session.videoConferenceLink, "_blank");
     } else {
-      router.push(`/session/${session._id}`);
+      router.push(`/tutor/video-session/${session._id}`);
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime())
+        ? "Invalid Date"
+        : date.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+    } catch {
+      return "Invalid Date";
+    }
   };
 
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString("en-US", {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatTime = (timeString: string) => {
+    if (!timeString) return "N/A";
+
+    try {
+      if (timeString.includes("T")) {
+        const date = new Date(timeString);
+        return isNaN(date.getTime())
+          ? "Invalid Time"
+          : date.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+      } else {
+        const [hours, minutes] = timeString.split(":");
+        const date = new Date();
+        date.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+        return date.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+    } catch {
+      return "Invalid Time";
+    }
   };
 
-  const formatTimeRange = (startDate: string, endDate: string) => {
-    return `${formatTime(startDate)} - ${formatTime(endDate)}`;
+  const formatTimeRange = (startTime: string, endTime: string) => {
+    const start = formatTime(startTime);
+    const end = formatTime(endTime);
+    return `${start} - ${end}`;
   };
 
-  const calculateDuration = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-    return `${Math.floor(durationMinutes / 60)}h ${Math.round(durationMinutes % 60)}m`;
+  const calculateDuration = (startTime: string, endTime: string) => {
+    try {
+      if (!startTime || !endTime) return "N/A";
+
+      let startDate: Date, endDate: Date;
+
+      if (startTime.includes("T") && endTime.includes("T")) {
+        startDate = new Date(startTime);
+        endDate = new Date(endTime);
+      } else {
+        const [startHours, startMins] = startTime.split(":").map(Number);
+        const [endHours, endMins] = endTime.split(":").map(Number);
+
+        startDate = new Date();
+        startDate.setHours(startHours, startMins, 0, 0);
+
+        endDate = new Date();
+        endDate.setHours(endHours, endMins, 0, 0);
+
+        if (endDate < startDate) {
+          endDate.setDate(endDate.getDate() + 1);
+        }
+      }
+
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return "Invalid Duration";
+      }
+
+      const durationMinutes =
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+      const hours = Math.floor(durationMinutes / 60);
+      const minutes = Math.round(durationMinutes % 60);
+
+      return `${hours}h ${minutes}m`;
+    } catch {
+      return "Invalid Duration";
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -325,7 +417,7 @@ export default function SessionsPage() {
       video: "Online",
       "in-person": "In-Person",
       group: "Group",
-      oneOnOne: "1-on-1"
+      oneOnOne: "1-on-1",
     };
     return typeMap[type] || type;
   };
@@ -379,6 +471,45 @@ export default function SessionsPage() {
           </div>
 
           <div className="flex-1 space-y-4 p-8 pt-6">
+            {showDeclineModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg max-w-md w-full">
+                  <h3 className="text-lg font-medium mb-4">
+                    Decline Session Request
+                  </h3>
+                  <textarea
+                    className="w-full p-2 border rounded mb-4"
+                    placeholder="Optional reason for declining..."
+                    value={declineReason}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowDeclineModal(false);
+                        setDeclineReason("");
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() =>
+                        handleStatusChange(
+                          currentSessionId,
+                          "declined",
+                          declineReason
+                        )
+                      }
+                    >
+                      Confirm Decline
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="sessions">Upcoming Sessions</TabsTrigger>
@@ -405,9 +536,7 @@ export default function SessionsPage() {
               <select
                 className="p-2 border rounded text-sm"
                 value={filter.type}
-                onChange={(e) =>
-                  setFilter({ ...filter, type: e.target.value })
-                }
+                onChange={(e) => setFilter({ ...filter, type: e.target.value })}
               >
                 <option value="all">All Session Types</option>
                 <option value="group">Group</option>
@@ -512,22 +641,28 @@ export default function SessionsPage() {
                               {formatDate(request.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {request.startTime && request.endTime ? (
-                                formatTimeRange(request.startTime, request.endTime)
-                              ) : (
-                                formatTime(request.scheduledDate)
-                              )}
+                              {request.startTime && request.endTime
+                                ? formatTimeRange(
+                                    request.startTime,
+                                    request.endTime
+                                  )
+                                : formatTime(request.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {request.startTime && request.endTime ? (
-                                calculateDuration(request.startTime, request.endTime)
-                              ) : "N/A"}
+                              {request.startTime && request.endTime
+                                ? calculateDuration(
+                                    request.startTime,
+                                    request.endTime
+                                  )
+                                : "N/A"}
                             </TableCell>
                             <TableCell>
                               {getSessionTypeDisplay(request.sessionType)}
                             </TableCell>
                             <TableCell>
-                              {request.sessionType === "video" ? "Online" : "In-Person"}
+                              {request.sessionType === "video"
+                                ? "Online"
+                                : "In-Person"}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">
@@ -535,9 +670,7 @@ export default function SessionsPage() {
                                   variant="outline"
                                   size="sm"
                                   className="text-destructive"
-                                  onClick={() =>
-                                    handleStatusChange(request._id, "declined")
-                                  }
+                                  onClick={() => openDeclineModal(request._id)}
                                 >
                                   <X size={16} className="mr-1" />
                                   Decline
@@ -623,22 +756,28 @@ export default function SessionsPage() {
                               {formatDate(session.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {session.startTime && session.endTime ? (
-                                formatTimeRange(session.startTime, session.endTime)
-                              ) : (
-                                formatTime(session.scheduledDate)
-                              )}
+                              {session.startTime && session.endTime
+                                ? formatTimeRange(
+                                    session.startTime,
+                                    session.endTime
+                                  )
+                                : formatTime(session.scheduledDate)}
                             </TableCell>
                             <TableCell>
-                              {session.startTime && session.endTime ? (
-                                calculateDuration(session.startTime, session.endTime)
-                              ) : "N/A"}
+                              {session.startTime && session.endTime
+                                ? calculateDuration(
+                                    session.startTime,
+                                    session.endTime
+                                  )
+                                : "N/A"}
                             </TableCell>
                             <TableCell>
                               {getSessionTypeDisplay(session.sessionType)}
                             </TableCell>
                             <TableCell>
-                              {session.sessionType === "video" ? "Online" : "In-Person"}
+                              {session.sessionType === "video"
+                                ? "Online"
+                                : "In-Person"}
                             </TableCell>
                             <TableCell>
                               {getStatusBadge(session.status)}

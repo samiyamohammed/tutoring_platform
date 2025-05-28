@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Award,
   BookOpen,
@@ -15,7 +15,7 @@ import {
   Shield,
   Upload,
   Users,
-} from "lucide-react"
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -28,41 +28,51 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useAuth } from "@/lib/auth-provider"
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/lib/auth-provider";
 
 export function AdminSidebar() {
-  const pathname = usePathname()
-  const { user, signOut } = useAuth()
+  const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   const isActive = (path: string) => {
-    return pathname === path || pathname?.startsWith(`${path}/`)
-  }
+    return pathname === path || pathname?.startsWith(`${path}/`);
+  };
 
   return (
     <Sidebar>
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-3">
-          <BookOpen className="h-6 w-6" />
-          <span className="font-bold">EduConnect</span>
-          <SidebarTrigger className="ml-auto" />
+        <div className="px-2 py-3 space-y-2">
+          {/* First Line: Title centered */}
+          <div className="flex justify-center">
+            <span className="font-bold text-center">Tutoring Platform</span>
+          </div>
+
+          {/* Second Line: Sidebar trigger aligned right */}
+          <div className="flex justify-end">
+            <SidebarTrigger />
+          </div>
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/dashboard")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/dashboard")}
+                >
                   <Link href="/admin/dashboard">
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Dashboard</span>
@@ -78,7 +88,10 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/courses")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/courses")}
+                >
                   <Link href="/admin/courses">
                     <BookOpen className="h-4 w-4" />
                     <span>Courses</span>
@@ -86,53 +99,71 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/tutor-requests")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/tutor-requests")}
+                >
                   <Link href="/admin/tutor-requests">
                     <FileCheck className="h-4 w-4" />
                     <span>Tutor Requests</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/certificate-templates")}>
+              {/* <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/certificate-templates")}
+                >
                   <Link href="/admin/certificate-templates">
                     <Award className="h-4 w-4" />
                     <span>Certificate Templates</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/upload-settings")}>
+              </SidebarMenuItem> */}
+              {/* <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/upload-settings")}
+                >
                   <Link href="/admin/upload-settings">
                     <Upload className="h-4 w-4" />
                     <span>Upload Settings</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/reports")}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/reports")}
+                >
                   <Link href="/admin/reports">
                     <Flag className="h-4 w-4" />
                     <span>Reports</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/payments")}>
+              {/* <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/payments")}
+                >
                   <Link href="/admin/payments">
                     <CreditCard className="h-4 w-4" />
                     <span>Payments</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/admin/settings")}>
+              </SidebarMenuItem> */}
+              {/* <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/admin/settings")}
+                >
                   <Link href="/admin/settings">
                     <Settings className="h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -142,7 +173,9 @@ export function AdminSidebar() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="w-full justify-start px-2">
               <Avatar className="h-6 w-6 mr-2">
-                <AvatarImage src={`https://avatar.vercel.sh/${user?.id || "admin"}`} />
+                <AvatarImage
+                  src={`https://avatar.vercel.sh/${user?.id || "admin"}`}
+                />
                 <AvatarFallback>
                   <Shield className="h-4 w-4" />
                 </AvatarFallback>
@@ -159,7 +192,13 @@ export function AdminSidebar() {
               <Link href="/admin/settings">Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
+            <DropdownMenuItem
+              onClick={() => {
+                localStorage.clear(); // Clear all local storage (or selectively remove items)
+                signOut(); // Optional: clear any context/auth state
+                window.location.href = "/auth/signin"; // Redirect to signin page
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
@@ -167,5 +206,5 @@ export function AdminSidebar() {
         </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

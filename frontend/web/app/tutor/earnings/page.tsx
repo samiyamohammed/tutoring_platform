@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/components/ui/use-toast"
+import { toast } from "sonner";
 import { TutorSidebar } from "@/components/tutor-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -99,7 +99,6 @@ const mockEarnings = {
 }
 
 export default function TutorEarningsPage() {
-  const { toast } = useToast()
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dateRange, setDateRange] = useState<{
@@ -149,19 +148,13 @@ export default function TutorEarningsPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      toast({
-        title: "Withdrawal requested",
-        description: `$${values.amount.toFixed(2)} withdrawal has been initiated.`,
-      })
+      toast.success( `$${values.amount.toFixed(2)} withdrawal has been initiated.`)
 
       setIsWithdrawDialogOpen(false)
       form.reset()
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process withdrawal. Please try again.",
-      })
+      toast.error( "Failed to process withdrawal. Please try again.",
+      )
     } finally {
       setIsSubmitting(false)
     }
